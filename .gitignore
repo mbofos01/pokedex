@@ -205,3 +205,7 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+/pkmn-data-images
+/pkmn-test-images
+/pokemon_dataset_hf/test
+/pokemon_dataset_hf/train

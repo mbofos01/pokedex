@@ -1,0 +1,54 @@
+services:
+  postgres:
+    image: postgres:15
+    command: [ "postgres", "-c", "logging_collector=off", "-c", "log_statement=none", "-c", "log_min_messages=fatal" ]
+    container_name: pkmn-db
+    environment:
+      POSTGRES_USER: pkmn
+      POSTGRES_PASSWORD: pkmn
+      POSTGRES_DB: pokedex
+    ports:
+      - "5432:5432"
+    volumes:
+      - pkmn_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U pkmn -d pokedex'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pkmn-fetcher:
+    build: pkmn-data-retrieval/.
+    container_name: pkmn-fetcher
+    restart: "no"
+    profiles:
+      - setup
+    volumes:
+      - ./pkmn-data-retrieval/src:/app/src
+      - ./pkmn-data-images:/app/images
+    depends_on:
+      postgres:
+        condition: service_healthy # Wait for PostgreSQL to be ready
+
+  pkmn-dataset:
+    build: pkmn-dataset/.
+    container_name: pkmn-dataset
+    restart: "no"
+    profiles:
+      - dataset
+    environment:
+      DB_HOST: postgres
+      DB_NAME: pokedex
+      DB_USER: pkmn
+      DB_PASSWORD: pkmn
+      DB_PORT: 5432
+    volumes:
+      - ./pkmn-dataset/src:/app/src
+      - ./pkmn-data-images:/app/images
+      - ./pokemon_dataset_hf:/app/pokemon_dataset_hf  # Output directory
+    depends_on:
+      postgres:
+        condition: service_healthy # Wait for PostgreSQL to be ready
+
+volumes:
+  pkmn_data:
