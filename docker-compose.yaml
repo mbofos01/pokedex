@@ -1,3 +1,24 @@
+x-wharfmap:
+  profiles:
+    setup:
+      color: "#E8F5E9"
+      border-color: "#2E7D32"
+      border-width: "2px"
+    classifier:
+      color: "#FFF3E0"
+      border-color: "#E65100"
+      border-width: "2px"
+    dataset:
+      color: "#E3F2FD"
+      border-color: "#1565C0"
+      border-width: "2px"
+  conditions:
+    service_healthy:
+      stroke: "#000000ff"
+      stroke-width: "2px"
+      stroke-dasharray: "5 5"
+      color: "#000000ff"
+
 services:
   postgres:
     image: postgres:15
@@ -12,6 +33,7 @@ services:
     profiles: 
       - setup
       - classifier
+      - dataset
     volumes:
       - pkmn_data:/var/lib/postgresql/data
     healthcheck:
@@ -19,6 +41,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    x-wharfmap:
+      color: "#BBDEFB"
+      border-color: "#1976D2"
+      border-width: "3px"
+      border-style: "dashed"
 
   pkmn-fetcher:
     build: pkmn-data-retrieval/.
@@ -28,10 +55,13 @@ services:
       - setup
     volumes:
       - ./pkmn-data-retrieval/src:/app/src
-      - ./pkmn-data-images:/app/images
     depends_on:
       postgres:
         condition: service_healthy # Wait for PostgreSQL to be ready
+    x-wharfmap:
+      color: "#C8E6C9"
+      border-color: "#388E3C"
+      border-width: "3px"
 
   pkmn-dataset:
     build: pkmn-dataset/.
@@ -47,11 +77,14 @@ services:
       DB_PORT: 5432
     volumes:
       - ./pkmn-dataset/src:/app/src
-      - ./pkmn-data-images:/app/images
       - ./pokemon_dataset_hf:/app/pokemon_dataset_hf  # Output directory
     depends_on:
       postgres:
         condition: service_healthy # Wait for PostgreSQL to be ready
+    x-wharfmap:
+      color: "#B2DFDB"
+      border-color: "#00796B"
+      border-width: "3px"
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.9.1
@@ -73,6 +106,10 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
+    x-wharfmap:
+      color: "#E1BEE7"
+      border-color: "#7B1FA2"
+      border-width: "3px"
 
   kafka:
     image: confluentinc/cp-kafka:7.9.1
@@ -105,6 +142,11 @@ services:
       timeout: 10s
       retries: 10
       start_period: 30s
+    x-wharfmap:
+      color: "#FFCCBC"
+      border-color: "#E64A19"
+      border-width: "3px"
+      border-style: "dashed"
 
   redis:
     image: redis:7-alpine
@@ -121,6 +163,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    x-wharfmap:
+      color: "#FFCDD2"
+      border-color: "#C62828"
+      border-width: "3px"
 
   pkmn-api:
     build: pkmn-api/.
@@ -144,10 +190,16 @@ services:
     volumes:
       - ./pkmn-api/src:/app/src
     depends_on:
+      postgres:
+        condition: service_healthy
       kafka:
         condition: service_healthy
       redis:
         condition: service_healthy
+    x-wharfmap:
+      color: "#FFE082"
+      border-color: "#F57C00"
+      border-width: "3px"
 
   pkmn-classifier:
     build: pkmn-classifier/.
@@ -166,6 +218,10 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
+    x-wharfmap:
+      color: "#C5CAE9"
+      border-color: "#303F9F"
+      border-width: "3px"
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -182,6 +238,10 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
+    x-wharfmap:
+      color: "#E3F2FD"
+      border-color: "#1976D2"
+      border-width: "3px"
 
 volumes:
   pkmn_data:
