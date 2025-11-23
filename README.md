@@ -1,165 +1,175 @@
-# 🎯 Pokemon Image Classification Project
+# Pokédex – AI Pokémon Classifier
 
-A machine learning pipeline for Pokemon image classification - currently in development.
+Full-stack Pokémon identification system with mobile app, ML classifier, and complete Pokédex data.
 
-![Pokemon Species Examples](pkmn-dataset/src/pokemon_species_examples.png)
+![Architecture](https://img.shields.io/badge/Architecture-Microservices-blue)
 
-## 📋 Project Status
+## 🎯 What It Does
 
-This project is **actively under development** and implements the foundational components for Pokemon image classification:
+Point your phone camera at any Pokémon → instantly get identification with stats, types, abilities, artwork, and more.
 
-✅ **Completed:**
-- Data fetching and storage pipeline
-- PostgreSQL database with Pokemon metadata
-- Dataset creation using Hugging Face datasets
-- Docker-based development environment
+## 🏗️ Architecture
 
-🚧 **In Progress:**
-- Vision Transformer (ViT) training scripts
-- Model evaluation and metrics
-- Training pipeline optimization
+A microservices-based system designed for scalability and maintainability.
 
-🔮 **Planned:**
-- Trained model artifacts
-- Explainable AI with LIME
-- Model performance analysis
-- Inference API
+- **📱 Mobile App** – React Native (iOS + Android)
+- **🌐 Backend API** – FastAPI
+- **🧠 ML Classifier** – ViT (Vision Transformer) via Transformers & PyTorch
+- **🗄️ Database** – PostgreSQL
+- **⚡ Message Broker** – Kafka
+- **🔥 Cache** – Redis
+- **📊 Monitoring** – Kafka UI
 
-## 🏗️ Current Architecture
+## 📦 Components
 
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Data Fetcher  │ -> │    PostgreSQL   │ -> │Dataset Creator  │
-│  (pkmn-fetcher) │    │   (postgres)    │    │(pkmn-dataset)   │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-       ✅                      ✅                      ✅
-```
+| Component       | Technology                 | Port | Status |
+|----------------|----------------------------|------|--------|
+| Mobile App     | React Native + Expo        | –    | ✅     |
+| API Gateway    | FastAPI                    | 8000 | ✅     |
+| ML Classifier  | Transformers (ViT)         | –    | ✅     |
+| Message Broker | Kafka                      | 29092| ✅     |
+| Database       | PostgreSQL                 | 5432 | ✅     |
+| Cache          | Redis                      | 6379 | ✅     |
+| Monitoring     | Kafka UI                   | 8080 | ✅     |
 
-## 🚀 Available Services
+## 🎮 Features
 
-### 1. **PostgreSQL Database** (`postgres`)
-- Stores Pokemon metadata and image paths
-- Health checks and data persistence
-- **Status**: ✅ Fully functional
+- 📸 Camera & gallery photo upload  
+- 🤖 98% accuracy ML classification  
+- 📊 Full Pokémon stats (types, abilities, height, weight)  
+- 🎨 Official artwork display  
+- ⚡ Real-time processing with Kafka  
+- 🔒 50% confidence threshold  
+- 🧭 Classic Pokédex-style UI  
 
-### 2. **Data Fetcher** (`pkmn-fetcher`)
-- Fetches Pokemon data from external APIs
-- Downloads and organizes images
-- Populates database with metadata
-- **Status**: ✅ Working
-- **Technologies**: Python, psycopg2
+## 🚀 Getting Started
 
-### 3. **Dataset Creator** (`pkmn-dataset`)
-- Queries Pokemon data using SQLAlchemy
-- Creates Hugging Face datasets with image loading
-- Implements train/test splits
-- **Status**: ✅ Recently completed
-- **Technologies**: datasets[vision], pandas, SQLAlchemy, uv
+### Prerequisites
 
-### 4. **Model Training** (`pkmn-classification`) 
-- Vision Transformer training scripts
-- Evaluation and metrics collection
-- **Status**: 🚧 Under development
-- **Technologies**: transformers, torch, scikit-learn
+- Docker & Docker Compose
+- Node.js 24+ (for mobile app)
+- ngrok (for mobile connectivity)
+- Expo Go app on your phone
 
-## 📊 Current Dataset
-
-**Available**: ~1000+ Pokemon images across multiple species
-**Format**: Hugging Face datasets with automatic image loading  
-**Storage**: Local `pokemon_dataset_hf/` directory
-**Database**: Metadata stored in PostgreSQL
-
-## 🐳 Docker Setup
-
-| Service | Status | Purpose | Command |
-|---------|--------|---------|---------|
-| `postgres` | ✅ | Database | `docker compose up postgres` |
-| `pkmn-fetcher` | ✅ | Data retrieval | `docker compose --profile setup up` |
-| `pkmn-dataset` | ✅ | Dataset creation | `docker compose --profile dataset up` |
-
-## 🛠️ Quick Start
-
-### 1. Setup Database & Fetch Data
-```bash
-# Start PostgreSQL and fetch Pokemon data
-docker compose --profile setup up --build
-```
-
-### 2. Create Dataset  
-```bash
-# Create Hugging Face dataset (just completed!)
-docker compose --profile dataset up --build
-```
-
-This will create a `pokemon_dataset_hf/` directory with:
-- Train/test splits
-- Pokemon image data
-- Label mappings
-- Dataset metadata
-
-## 🔧 Technical Features
-
-**Modern Development Stack:**
-- **🚀 Fast Package Management**: Uses `uv` for 5-10x faster Docker builds
-- **🐳 Docker Compose**: Microservices architecture  
-- **📊 SQLAlchemy**: Modern database operations
-- **📦 HuggingFace Datasets**: Industry-standard ML data handling
-- **🗃️ PostgreSQL**: Robust metadata storage
-
-## 📁 Current Directory Structure
-
-```
-pokedex/
-├── pkmn-data-retrieval/     # ✅ Data fetching service
-├── pkmn-dataset/           # ✅ Dataset creation service  
-├── pkmn-classification/    # 🚧 Training scripts (in progress)
-├── pkmn-data-images/       # ✅ Downloaded Pokemon images
-├── pokemon_dataset_hf/     # ✅ Generated HuggingFace dataset
-└── docker-compose.yaml     # ✅ Service orchestration
-```
-
-## 🧪 Technology Choices
-
-| Component | Technology | Reason |
-|-----------|------------|--------|
-| **Database** | PostgreSQL | Reliable, well-supported |
-| **Containerization** | Docker | Reproducible environments |
-| **Package Management** | uv | Fast, modern Python packaging |
-| **ML Datasets** | HuggingFace | Industry standard |
-| **ML Framework** | PyTorch + Transformers | Planned for ViT |
-
-## 📝 Current Usage
+### 1. Setup Database & Fetch Pokémon Data
 
 ```bash
-# Available now:
-docker compose up postgres                    # Database
-docker compose --profile setup up            # Fetch data
-docker compose --profile dataset up          # Create dataset
-
-# Coming soon:
-docker compose --profile train up            # Model training
-docker compose --profile inference up        # Model inference
+# Start PostgreSQL and fetch Pokemon data (~30-45 min)
+docker-compose --profile setup up
 ```
 
-## 🎯 Next Steps
+This will create database tables and fetch 1000+ Pokémon from PokeAPI with sprites and metadata.
 
-1. **Complete ViT training pipeline** - Finish model training scripts
-2. **Model evaluation** - Comprehensive metrics and analysis  
-3. **Trained model artifacts** - Save and version trained models
-4. **Performance analysis** - Accuracy, confusion matrices, etc.
-5. **Explainable AI** - LIME explanations for predictions
-6. **Inference API** - REST API for real-time predictions
+### 2. Start Backend Services
 
-## 🚧 Development Notes
+```bash
+# Start all backend services
+docker-compose --profile classifier up
 
-This is an **educational/experimental project** exploring modern MLOps practices:
-- Clean microservices architecture
-- Reproducible ML pipelines  
-- Modern Python packaging with `uv`
-- Docker-based development workflow
+# Services started:
+# ✓ PostgreSQL (5432)
+# ✓ Zookeeper (2181)
+# ✓ Kafka (29092)
+# ✓ Redis (6379)
+# ✓ FastAPI (8000)
+# ✓ ML Classifier
+# ✓ Kafka UI (8080)
+```
 
-**Contributions and suggestions welcome!** This is a learning project focusing on best practices in ML engineering.
+### 3. Expose API with ngrok
 
----
+```bash
+# In a new terminal
+npx ngrok http 8000
 
-**Building step by step! 🚀**
+# Copy the HTTPS URL (e.g., https://abc-123.ngrok-free.app)
+```
+
+### 4. Setup & Run Mobile App
+
+```bash
+cd pkmn-mobile
+
+# Install dependencies
+npm install --legacy-peer-deps
+
+# Update API_URL in App.tsx with your ngrok URL
+
+# Start Expo
+npx expo start -c --tunnel
+
+# Scan QR code with Expo Go app on your phone
+```
+
+## 📱 Mobile App
+
+The mobile application is built with React Native + Expo.
+
+### Features
+
+- Camera integration
+- Real-time image recognition
+- Detailed Pokémon info pages
+
+## 🌐 API
+
+Backend built with FastAPI.
+
+### Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST   | /classify-pokemon/ | Upload image for classification |
+| GET    | /result/{request_id} | Retrieve classification result |
+| GET    | /pokemon/{id} | Pokémon details |
+| GET    | /types | All Pokémon types |
+| GET    | /abilities | All Pokémon abilities |
+| GET    | /health | Health check |
+
+Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+## 🧠 Machine Learning Classifier
+
+Powered by Transformers ViT.
+
+### Model Architecture
+
+- Vision Transformer encoder
+- Dense layers for classification
+- Softmax output across Pokémon species
+
+Trained on a curated Pokémon dataset.
+
+## 📊 Database
+
+PostgreSQL, with tables for:
+
+- users
+- pokemon
+- stats
+- requests (classification jobs)
+
+Caching via Redis.
+
+## 🔧 Development Tools
+
+- Docker for containerization
+- Docker Compose for local orchestration
+- ngrok for exposing API to the mobile app
+- Kafka for distributing classification tasks
+
+## 🐛 Common Issues
+
+- Mobile won't connect → Update the ngrok URL in `App.tsx`  
+- Model slow first time → Downloads ~400 MB model cache  
+- Expo errors → Use Node 24+, run `npm install --legacy-peer-deps`  
+- Image too large → Auto-compressed to 800×800  
+
+## 📄 License
+
+See LICENSE.
+
+## 🙏 Credits
+
+- **PokeAPI** – Pokémon data and stats  
+- **ML Model** – [skshmjn/Pokemon-classifier-gen9-1025](https://huggingface.co/skshmjn/Pokemon-classifier-gen9-1025) (Vision Transformer fine-tuned for Gen 9 Pokémon, Apache-2.0 License)
