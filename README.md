@@ -6,6 +6,7 @@ Full-stack Pokémon identification system with mobile app, ML classifier, and co
 
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"background":"#ffffff"}}}%%
             graph TD
   subgraph Profile_setup[<b>Profile: setup</b>]
     postgres["postgres<br/>(setup, classifier, dataset)"]:::custom_postgres
