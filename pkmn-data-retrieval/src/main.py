@@ -2,9 +2,6 @@ from psycopg2.extras import execute_values
 import psycopg2
 import re
 import pokebase as pb
-import requests
-import os
-from urllib.parse import urlparse
 import time
 
 
@@ -100,63 +97,6 @@ def get_basic_info(p):
     }
 
 
-def download_image(url, pokemon_id, image_type, images_dir="/app/images"):
-    """Download an image and return the local file path"""
-    try:
-        # Create images directory if it doesn't exist
-        os.makedirs(images_dir, exist_ok=True)
-        
-        # Create subdirectory for this pokemon
-        pokemon_dir = os.path.join(images_dir, str(pokemon_id))
-        os.makedirs(pokemon_dir, exist_ok=True)
-        
-        # Get file extension from URL
-        parsed_url = urlparse(url)
-        file_ext = os.path.splitext(parsed_url.path)[1] or '.png'
-        
-        # Create filename
-        filename = f"{image_type}{file_ext}"
-        file_path = os.path.join(pokemon_dir, filename)
-        
-        # Skip if file already exists
-        if os.path.exists(file_path):
-            return file_path
-        
-        # Download the image
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        
-        # Save the image
-        with open(file_path, 'wb') as f:
-            f.write(response.content)
-        
-        # print(f"  Downloaded: {image_type}")
-        return file_path
-        
-    except Exception as e:
-        print(f"  Failed to download {image_type}: {e}")
-        return None
-
-
-def download_all_images(p):
-    """Download all images for a pokemon and return a dict with local paths"""
-    images_urls = get_all_images(p)
-    local_images = {}
-    
-    # print(f"  Downloading {len(images_urls)} images...")
-    
-    for image_type, url in images_urls.items():
-        if url:
-            local_path = download_image(url, p.id, image_type)
-            if local_path:
-                local_images[image_type] = local_path
-            # Small delay to be nice to the server
-            time.sleep(0.1)
-    
-    print(f"  Successfully downloaded {len(local_images)} images")
-    return local_images
-
-
 def get_types(p):
     return [t.type.name for t in p.types]
 
@@ -233,7 +173,6 @@ CREATE TABLE IF NOT EXISTS images (
     pokemon_id INT REFERENCES pokemon(id),
     image_type TEXT,
     url TEXT,
-    image_path TEXT,
     PRIMARY KEY (pokemon_id, image_type)
 );
 """)
@@ -282,25 +221,24 @@ def insert_pokemon(p):
             """, (p.id, m["name"], m["method"], m["level"], m["version_group"]))
 
 
-
-        # Images - Download and save locally
-        local_images = download_all_images(p)
-        for image_type, local_path in local_images.items():
-            # Get original URL for reference
-            original_urls = get_all_images(p)
-            original_url = original_urls.get(image_type)
-            
-            cur.execute("""
-                INSERT INTO images (pokemon_id, image_type, url, image_path)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (pokemon_id, image_type) DO NOTHING
-            """, (p.id, image_type, original_url, local_path))
+        # Images - Store URLs only
+        images = get_all_images(p)
+        for image_type, url in images.items():
+            if url:
+                cur.execute("""
+                    INSERT INTO images (pokemon_id, image_type, url)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (pokemon_id, image_type) DO NOTHING
+                """, (p.id, image_type, url))
 
         conn.commit()
         print(f"Inserted {p.name}")
     except Exception as e:
         conn.rollback()
         print(f"Failed {p.name}: {e}")
+    
+    # Be polite to the API server
+    time.sleep(0.5)
 
 
 # -----------------------
@@ -310,12 +248,15 @@ pokemon_list = list(pb.APIResourceList('pokemon'))
 
 print(f"Total Pokémon to process: {len(pokemon_list)}")
 
-pokemon_list = pokemon_list[:10]
-
 for idx, res in enumerate(pokemon_list, 1):
-    p = pb.pokemon(res['name'])
-    print(f"[{idx}/{len(pokemon_list)}] Processing {p.name}")
-    insert_pokemon(p)
+    try:
+        p = pb.pokemon(res['name'])
+        print(f"[{idx}/{len(pokemon_list)}] Processing {p.name}")
+        insert_pokemon(p)
+    except Exception as e:
+        print(f"[{idx}/{len(pokemon_list)}] ERROR processing {res['name']}: {e}")
+        # Longer delay after error
+        time.sleep(2)
 
 
 cur.close()
