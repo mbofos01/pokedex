@@ -209,3 +209,5 @@ __marimo__/
 /pkmn-test-images
 /pokemon_dataset_hf/test
 /pokemon_dataset_hf/train
+/pkmn-mobile/.expo
+/pkmn-mobile/node_modules

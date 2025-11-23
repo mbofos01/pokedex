@@ -1,0 +1,6 @@
+torch
+torchvision
+transformers
+Pillow
+kafka-python
+requests
