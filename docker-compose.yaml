@@ -14,10 +14,10 @@ x-wharfmap:
       border-width: "2px"
   conditions:
     service_healthy:
-      stroke: "#000000ff"
+      # stroke: "#000000ff"
       stroke-width: "2px"
       stroke-dasharray: "5 5"
-      color: "#000000ff"
+      # color: "#000000ff"
 
 services:
   postgres:
