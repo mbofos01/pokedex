@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from kafka import KafkaProducer, KafkaConsumer
 import json
 import uuid
@@ -11,8 +12,18 @@ from PIL import Image
 import io
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from cryptography.fernet import Fernet
+import base64
+from dotenv import load_dotenv
 
-app = FastAPI(title="Pokemon Classifier API")
+app = FastAPI(
+    title="Pokemon Classifier API",
+    docs_url="/swagger",
+    redoc_url="/docs"
+)
+
+# Load .env file from same directory
+load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
 # Enable CORS
 app.add_middleware(
@@ -38,6 +49,21 @@ DB_NAME = os.getenv('DB_NAME', 'pokedex')
 DB_USER = os.getenv('DB_USER', 'pkmn')
 DB_PASSWORD = os.getenv('DB_PASSWORD', 'pkmn')
 DB_PORT = os.getenv('DB_PORT', '5432')
+
+# Encryption configuration
+ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY')
+if not ENCRYPTION_KEY:
+    print("\n" + "="*60)
+    print("❌ ERROR: ENCRYPTION_KEY not found!")
+    print("="*60)
+    print("\nPlease generate an encryption key by running:")
+    print("\n  python src/generate_key.py")
+    print("\nOr set ENCRYPTION_KEY in your .env file")
+    print("="*60 + "\n")
+    import sys
+    sys.exit(1)  # Graceful exit instead of exception
+
+fernet = Fernet(ENCRYPTION_KEY.encode())
 
 # Initialize Redis client
 redis_client = redis.Redis(
@@ -125,6 +151,14 @@ def get_pokemon_details(pokemon_name: str):
         print(f"Database error: {e}")
         return None
 
+def encrypt_data(data: str) -> str:
+    """Encrypt data before storing in Redis"""
+    return fernet.encrypt(data.encode()).decode()
+
+def decrypt_data(encrypted_data: str) -> str:
+    """Decrypt data from Redis"""
+    return fernet.decrypt(encrypted_data.encode()).decode()
+
 # Background consumer for results
 def consume_results():
     """Background thread to consume classification results from Kafka"""
@@ -149,16 +183,17 @@ def consume_results():
             if pokemon_name and pokemon_name != 'Unknown':
                 pokemon_details = get_pokemon_details(pokemon_name)
             
-            # Store result with Pokemon details in Redis
+            # Store result with Pokemon details in Redis (encrypted)
             result_data = {
                 **data,
                 'pokemon_details': pokemon_details
             }
             
+            encrypted_result = encrypt_data(json.dumps(result_data))
             redis_client.setex(
                 f"result:{request_id}",
                 3600,
-                json.dumps(result_data)
+                encrypted_result
             )
             print(f"✓ Received result for request_id: {request_id}")
 
@@ -169,6 +204,11 @@ async def startup_event():
     consumer_thread = Thread(target=consume_results, daemon=True)
     consumer_thread.start()
     print("✓ API started, consumer thread running")
+
+@app.get("/", include_in_schema=False)
+async def root():
+    """Redirect root to ReDoc documentation"""
+    return RedirectResponse(url="/swagger")
 
 @app.get("/health")
 async def health_check():
@@ -255,9 +295,11 @@ async def get_result(request_id: str):
     Poll this endpoint to check if classification is complete
     """
     result_key = f"result:{request_id}"
-    result_json = redis_client.get(result_key)
+    encrypted_result = redis_client.get(result_key)
     
-    if result_json:
+    if encrypted_result:
+        # Decrypt and parse result
+        result_json = decrypt_data(encrypted_result)
         result = json.loads(result_json)
         redis_client.delete(result_key)  # Remove after retrieval
         
