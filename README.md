@@ -68,15 +68,15 @@ A microservices-based system designed for scalability and maintainability.
 
 ## 📦 Components
 
-| Component       | Technology                 | Port | Status |
-|----------------|----------------------------|------|--------|
-| Mobile App     | React Native + Expo        | –    | ✅     |
-| API Gateway    | FastAPI                    | 8000 | ✅     |
-| ML Classifier  | Transformers (ViT)         | –    | ✅     |
-| Message Broker | Kafka                      | 29092| ✅     |
-| Database       | PostgreSQL                 | 5432 | ✅     |
-| Cache          | Redis                      | 6379 | ✅     |
-| Monitoring     | Kafka UI                   | 8080 | ✅     |
+| Component       | Technology                 | Port         | Status |
+|----------------|----------------------------|---------------|--------|
+| Mobile App     | React Native + Expo        | –             | ✅     |
+| API Gateway    | FastAPI                    | 8000          | ✅     |
+| ML Classifier  | Transformers (ViT)         | –             | ✅     |
+| Message Broker | Apache Kafka + Zookeeper   | 29092 / 2181  | ✅     |
+| Database       | PostgreSQL                 | 5432          | ✅     |
+| Cache          | Redis                      | 6379          | ✅     |
+| Monitoring     | Kafka UI                   | 8080          | ✅     |
 
 ## 🎮 Features
 
