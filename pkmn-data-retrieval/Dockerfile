@@ -15,7 +15,7 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
     mv /root/.local/bin/uvx /usr/local/bin/uvx
 
 # Copy requirements and install using uv (much faster than pip)
-COPY requirements.txt ./
+COPY requirements.txt .
 RUN uv pip install --system --no-cache -r requirements.txt
 
 # Copy source code
