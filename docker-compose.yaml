@@ -8,10 +8,6 @@ x-wharfmap:
       color: "#FFF3E0"
       border-color: "#E65100"
       border-width: "2px"
-    dataset:
-      color: "#E3F2FD"
-      border-color: "#1565C0"
-      border-width: "2px"
   conditions:
     service_healthy:
       # stroke: "#000000ff"
@@ -33,7 +29,6 @@ services:
     profiles: 
       - setup
       - classifier
-      - dataset
     volumes:
       - pkmn_data:/var/lib/postgresql/data
     healthcheck:
@@ -63,29 +58,6 @@ services:
       border-color: "#388E3C"
       border-width: "3px"
 
-  pkmn-dataset:
-    build: pkmn-dataset/.
-    container_name: pkmn-dataset
-    restart: "no"
-    profiles:
-      - dataset
-    environment:
-      DB_HOST: postgres
-      DB_NAME: pokedex
-      DB_USER: pkmn
-      DB_PASSWORD: pkmn
-      DB_PORT: 5432
-    volumes:
-      - ./pkmn-dataset/src:/app/src
-      - ./pokemon_dataset_hf:/app/pokemon_dataset_hf  # Output directory
-    depends_on:
-      postgres:
-        condition: service_healthy # Wait for PostgreSQL to be ready
-    x-wharfmap:
-      color: "#B2DFDB"
-      border-color: "#00796B"
-      border-width: "3px"
-
   zookeeper:
     image: confluentinc/cp-zookeeper:7.9.1
     container_name: zookeeper
@@ -95,7 +67,7 @@ services:
       ZOOKEEPER_SYNC_LIMIT: 2
       ZOOKEEPER_MAX_CLIENT_CNXNS: 60
       ZOOKEEPER_LOG4J_ROOT_LOGLEVEL: "ERROR"
-      ZOOKEEPER_LOG4J_LOGGERS: "zookeeper=ERROR"
+      ZOOKEEPER_LOG4J_LOGGERS: "org.apache.zookeeper=ERROR"
     ports:
       - "2181:2181"
     profiles:
@@ -114,6 +86,7 @@ services:
   kafka:
     image: confluentinc/cp-kafka:7.9.1
     container_name: kafka
+    restart: unless-stopped
     depends_on:
       zookeeper:
         condition: service_healthy
@@ -130,18 +103,26 @@ services:
       KAFKA_MESSAGE_MAX_BYTES: 10485760
       KAFKA_REPLICA_FETCH_MAX_BYTES: 10485760
       KAFKA_MAX_REQUEST_SIZE: 10485760
-      KAFKA_LOG4J_ROOT_LOGLEVEL: "FATAL"
-      KAFKA_LOG4J_LOGGERS: "kafka.controller=FATAL,state.change.logger=FATAL"
+      KAFKA_LOG4J_ROOT_LOGLEVEL: "WARN"
+      KAFKA_LOG4J_LOGGERS: "kafka.controller=ERROR,state.change.logger=ERROR"
+      KAFKA_LOG4J_OPTS: "-Dlog4j.configuration=file:/app/kafka-log4j.properties"
+    volumes:
+      - ./custom-log4j.properties:/app/kafka-log4j.properties:ro
     ports:
-      - "29092:29092"  # Only expose this for external connections
+      - "29092:29092"
     profiles:
       - classifier
     healthcheck:
-      test: ["CMD-SHELL", "echo > /dev/tcp/localhost/9092"]
+      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
       interval: 10s
-      timeout: 10s
-      retries: 10
-      start_period: 30s
+      timeout: 5s
+      retries: 30
+      start_period: 90s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
     x-wharfmap:
       color: "#FFCCBC"
       border-color: "#E64A19"
@@ -155,7 +136,7 @@ services:
       - classifier
     ports:
       - "6379:6379"
-    command: redis-server --appendonly yes
+    command: sh -c "echo 'Hello, Redis is starting!' && redis-server --appendonly yes --loglevel warning"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -171,7 +152,7 @@ services:
   pkmn-api:
     build: pkmn-api/.
     container_name: pkmn-api
-    restart: on-failure
+    restart: on-failure:3
     profiles:
       - classifier
     environment:
@@ -204,7 +185,7 @@ services:
   pkmn-classifier:
     build: pkmn-classifier/.
     container_name: pkmn-classifier
-    restart: on-failure
+    restart: on-failure:3
     profiles:
       - classifier
     environment:
@@ -234,7 +215,13 @@ services:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
       KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
-      LOG_LEVEL: WARN
+      LOG_LEVEL: OFF
+      LOGGING_LEVEL_ROOT: OFF
+      LOGGING_LEVEL_COM_PROVECTUS: OFF
+      LOGGING_LEVEL_REACTOR_CORE_PUBLISHER: OFF
+      AUTH_TYPE: "LOGIN_FORM"
+      SPRING_SECURITY_USER_NAME: mbofos
+      SPRING_SECURITY_USER_PASSWORD: 987654321
     depends_on:
       kafka:
         condition: service_healthy
