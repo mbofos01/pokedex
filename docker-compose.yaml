@@ -26,9 +26,6 @@ services:
       POSTGRES_DB: pokedex
     ports:
       - "5432:5432"
-    profiles: 
-      - setup
-      - classifier
     volumes:
       - pkmn_data:/var/lib/postgresql/data
     healthcheck:
