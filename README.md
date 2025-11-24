@@ -186,7 +186,7 @@ Backend built with FastAPI.
 | POST   | /classify-pokemon/ | Upload image for classification |
 | GET    | /result/{request_id} | Retrieve classification result |
 
-Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+Docs: [http://localhost:8000/docs](http://localhost:8000/docs) <br>
 Swagger: [http://localhost:8000/swagger](http://localhost:8000/swagger)
 
 ## 🧠 Machine Learning Classifier
