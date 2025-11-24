@@ -81,8 +81,8 @@ A microservices-based system designed for scalability and maintainability.
 ## 🎮 Features
 
 - 📸 Camera & gallery photo upload  
-- 🤖 98% accuracy ML classification  
-- 📊 Full Pokémon stats (types, abilities, height, weight)  
+- 🤖 ML-powered classification  
+- 📊 Complete Pokémon stats (types, abilities, height, weight)  
 - 🎨 Official artwork display  
 - ⚡ Real-time processing with Kafka  
 - 🔒 50% confidence threshold  
