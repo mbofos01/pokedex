@@ -54,6 +54,12 @@ Full-stack Pokémon identification system with mobile app, ML classifier, and co
 
 Point your phone camera at any Pokémon → instantly get identification with stats, types, abilities, artwork, and more.
 
+## 📸 Screenshots
+
+| Home Screen | Scanning | Results |
+|-------------|----------|---------|
+| ![Home Screen](docs/screenshots/home_page.jpg) | ![Scanning](docs/screenshots/scan.jpg) | ![Results](docs/screenshots/info_page.jpg) |
+
 ## 🏗️ Architecture
 
 A microservices-based system designed for scalability and maintainability.
