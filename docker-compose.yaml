@@ -220,8 +220,8 @@ services:
       LOGGING_LEVEL_COM_PROVECTUS: OFF
       LOGGING_LEVEL_REACTOR_CORE_PUBLISHER: OFF
       AUTH_TYPE: "LOGIN_FORM"
-      SPRING_SECURITY_USER_NAME: mbofos
-      SPRING_SECURITY_USER_PASSWORD: 987654321
+      SPRING_SECURITY_USER_NAME: username
+      SPRING_SECURITY_USER_PASSWORD: password
     depends_on:
       kafka:
         condition: service_healthy
