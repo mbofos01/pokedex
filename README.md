@@ -185,12 +185,9 @@ Backend built with FastAPI.
 |--------|----------|-------------|
 | POST   | /classify-pokemon/ | Upload image for classification |
 | GET    | /result/{request_id} | Retrieve classification result |
-| GET    | /pokemon/{id} | Pokémon details |
-| GET    | /types | All Pokémon types |
-| GET    | /abilities | All Pokémon abilities |
-| GET    | /health | Health check |
 
 Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+Swagger: [http://localhost:8000/swagger](http://localhost:8000/swagger)
 
 ## 🧠 Machine Learning Classifier
 
@@ -208,12 +205,13 @@ Trained on a curated Pokémon dataset.
 
 PostgreSQL, with tables for:
 
-- users
 - pokemon
+- images
 - stats
-- requests (classification jobs)
+- abilities
+- moves
+- types
 
-Caching via Redis.
 
 ## 🔧 Development Tools
 
@@ -221,6 +219,7 @@ Caching via Redis.
 - Docker Compose for local orchestration
 - ngrok for exposing API to the mobile app
 - Kafka for distributing classification tasks
+- Redis for result caching
 
 ## 🐛 Common Issues
 
