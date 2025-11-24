@@ -196,6 +196,7 @@ services:
       PYTHONUNBUFFERED: 1
     volumes:
       - ./pkmn-classifier/src:/app/src
+      - ./pkmn-classifier/test:/app/test
     depends_on:
       kafka:
         condition: service_healthy

@@ -3,13 +3,19 @@ from PIL import Image
 import json
 import io
 import sys
+import os
+import time
 
 def send_pokemon_image(image_path, filename=None):
     """Send a Pokemon image to Kafka topic"""
     
+    # Get configuration from environment variables
+    KAFKA_BOOTSTRAP_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'localhost:29092')
+    KAFKA_INPUT_TOPIC = os.getenv('KAFKA_INPUT_TOPIC', 'pokemon-images')
+    
     # Connect to Kafka
     producer = KafkaProducer(
-        bootstrap_servers='localhost:29092',  # Use host port
+        bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
         value_serializer=lambda v: json.dumps(v).encode('utf-8')
     )
     
@@ -28,10 +34,11 @@ def send_pokemon_image(image_path, filename=None):
     }
     
     # Send to Kafka
-    future = producer.send('pokemon-images', message)
+    future = producer.send(KAFKA_INPUT_TOPIC, message)
     result = future.get(timeout=10)
     
     print(f"✓ Message sent successfully!")
+    print(f"  Bootstrap Servers: {KAFKA_BOOTSTRAP_SERVERS}")
     print(f"  Topic: {result.topic}")
     print(f"  Partition: {result.partition}")
     print(f"  Offset: {result.offset}")
@@ -41,8 +48,6 @@ def send_pokemon_image(image_path, filename=None):
     producer.close()
 
 if __name__ == "__main__":
-    import time
-    
     if len(sys.argv) < 2:
         print("Usage: python send_test_message.py <image_path> [filename]")
         print("Example: python send_test_message.py pikachu.png")
