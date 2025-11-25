@@ -95,7 +95,17 @@ def get_pokemon_details(pokemon_name: str):
         cur.execute("""
             SELECT id, name, height, weight, base_experience
             FROM pokemon
-            WHERE LOWER(name) = LOWER(%s)
+            WHERE LOWER(
+                    REGEXP_REPLACE(
+                        REPLACE(REPLACE(REPLACE(name, '♂', 'm'), '♀', 'f'), '''', ''),
+                        E'[^a-z0-9]', '', 'g'
+                    )
+                ) = LOWER(
+                    REGEXP_REPLACE(
+                        REPLACE(REPLACE(REPLACE(LOWER(%s), '♂', 'm'), '♀', 'f'), '''', ''),
+                        E'[^a-z0-9]', '', 'g'
+                    )
+                )
         """, (pokemon_name,))
         pokemon = cur.fetchone()
         
