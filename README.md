@@ -221,7 +221,6 @@ Backend built with FastAPI, accessible via ngrok tunnel.
 **Documentation:**
 - ReDoc: `https://your-ngrok-url/docs`
 - Swagger: `https://your-ngrok-url/swagger`
-- Local: `http://your-ngrok-url/docs`
 
 ## 🔐 Security Features
 
