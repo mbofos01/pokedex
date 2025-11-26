@@ -1,8 +1,10 @@
 # Pokédex – AI Pokémon Classifier
 
-Full-stack Pokémon identification system with mobile app, ML classifier, and complete Pokédex data.
+AI-powered Pokémon classifier with mobile app. Snap a photo to identify Pokémon species. Features: React Native Pokédex UI, FastAPI backend, Kafka messaging, Vision Transformer ML model, complete stats & artwork. Microservices architecture with Docker.
 
 ![Architecture](https://img.shields.io/badge/Architecture-Microservices-blue)
+![Status](https://img.shields.io/badge/Status-Production%20Ready-success)
+![License](https://img.shields.io/badge/License-GPL%20v3-blue.svg)
 
 
 ```mermaid
@@ -18,6 +20,8 @@ Full-stack Pokémon identification system with mobile app, ML classifier, and co
       pkmn-api:::custom_pkmn-api
       pkmn-classifier:::custom_pkmn-classifier
       kafka-ui:::custom_kafka-ui
+      nginx:::custom_nginx
+      ngrok:::custom_ngrok
     end
     postgres:::custom_postgres
     pkmn-fetcher -->|depends_on: service_healthy| postgres
@@ -27,6 +31,8 @@ Full-stack Pokémon identification system with mobile app, ML classifier, and co
     pkmn-api -->|depends_on: service_healthy| redis
     pkmn-classifier -->|depends_on: service_healthy| kafka
     kafka-ui -->|depends_on: service_healthy| kafka
+    nginx -->|depends_on: service_healthy| pkmn-api
+    ngrok -->|depends_on| nginx
     classDef profileService fill:#FFF9C4,stroke:#F57F17,stroke-width:2px;
     classDef multiProfileService fill:#FFE082,stroke:#E65100,stroke-width:3px,stroke-dasharray: 5 5;
     classDef custom_postgres fill:#BBDEFB,stroke:#1976D2,stroke-width:3px,stroke-dasharray: 5 5;
@@ -37,6 +43,8 @@ Full-stack Pokémon identification system with mobile app, ML classifier, and co
     classDef custom_pkmn-api fill:#FFE082,stroke:#F57C00,stroke-width:3px;
     classDef custom_pkmn-classifier fill:#C5CAE9,stroke:#303F9F,stroke-width:3px;
     classDef custom_kafka-ui fill:#E3F2FD,stroke:#1976D2,stroke-width:3px;
+    classDef custom_nginx fill:#FFF9C4,stroke:#F57F17,stroke-width:3px;
+    classDef custom_ngrok fill:#D1C4E9,stroke:#512DA8,stroke-width:3px;
     style Profile_setup fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px
     style Profile_classifier fill:#FFF3E0,stroke:#E65100,stroke-width:2px
     linkStyle 0 stroke-width:2px,stroke-dasharray:5 5
@@ -46,6 +54,7 @@ Full-stack Pokémon identification system with mobile app, ML classifier, and co
     linkStyle 4 stroke-width:2px,stroke-dasharray:5 5
     linkStyle 5 stroke-width:2px,stroke-dasharray:5 5
     linkStyle 6 stroke-width:2px,stroke-dasharray:5 5
+    linkStyle 7 stroke-width:2px,stroke-dasharray:5 5
 ```
 
 ## 🎯 What It Does
@@ -79,7 +88,9 @@ A microservices-based system designed for scalability and maintainability.
 | ML Classifier  | Transformers (ViT)         | –             | ✅     |
 | Message Broker | Apache Kafka + Zookeeper   | 29092 / 2181  | ✅     |
 | Database       | PostgreSQL                 | 5432          | ✅     |
-| Cache          | Redis                      | 6379          | ✅     |
+| Cache          | Redis (encrypted)          | 6379          | ✅     |
+| Reverse Proxy  | Nginx                      | 80            | ✅     |
+| Tunnel         | ngrok                      | –             | ✅     |
 | Monitoring     | Kafka UI                   | 8080          | ✅     |
 
 ## 🎮 Features
@@ -90,6 +101,8 @@ A microservices-based system designed for scalability and maintainability.
 - 🎨 Official artwork display  
 - ⚡ Real-time processing with Kafka  
 - 🔒 50% confidence threshold  
+- 🔐 Encrypted data at rest (Redis)
+- 🌐 Public API access via ngrok tunnel
 - 🧭 Classic Pokédex-style UI  
 
 ## 🚀 Quick Start
@@ -98,9 +111,9 @@ A microservices-based system designed for scalability and maintainability.
 
 - Docker & Docker Compose
 - Node.js 24+ (for mobile app)
-- ngrok (for mobile connectivity)
 - Expo Go app on your phone
 - **Python 3.x with cryptography library** (for key generation)
+- **ngrok account** (free tier works)
 
 ### 0. Generate Encryption Key (First Time Only)
 
@@ -122,13 +135,24 @@ python generate_key.py
 ### 1. Setup Database & Fetch Pokémon Data
 
 ```bash
-# Start PostgreSQL and fetch Pokemon data (~30-45 min)
+# Start PostgreSQL and fetch Pokemon data (~30-45 min for all 1000+ Pokemon)
 docker-compose --profile setup up
+
+# This fetches all Pokemon with 0.5s delay between requests (polite to PokeAPI)
 ```
 
 This will create database tables and fetch 1000+ Pokémon from PokeAPI with sprites and metadata.
 
-### 2. Start Backend Services
+### 2. Configure ngrok
+
+```bash
+# Add your ngrok auth token to .env file in project root
+echo "NGROK_AUTHTOKEN=your_token_here" >> .env
+
+# Get your token from: https://dashboard.ngrok.com/get-started/your-authtoken
+```
+
+### 3. Start Backend Services
 
 ```bash
 # Start all backend services
@@ -137,23 +161,25 @@ docker-compose --profile classifier up
 # Services started:
 # ✓ PostgreSQL (5432)
 # ✓ Zookeeper (2181)
-# ✓ Kafka (29092)
+# ✓ Kafka (29092) 
 # ✓ Redis (6379)
 # ✓ FastAPI (8000)
 # ✓ ML Classifier
 # ✓ Kafka UI (8080)
+# ✓ Nginx (80)
+# ✓ ngrok - public tunnel
 ```
 
-### 3. Expose API with ngrok
+### 4. Get Your Public URL
 
 ```bash
-# In a new terminal
-npx ngrok http 8000
+# Check ngrok logs for your public URL
+docker logs ngrok
 
-# Copy the HTTPS URL (e.g., https://abc-123.ngrok-free.app)
+# Look for: https://your-random-url.ngrok-free.app
 ```
 
-### 4. Setup & Run Mobile App
+### 5. Setup & Run Mobile App
 
 ```bash
 cd pkmn-mobile
@@ -162,6 +188,7 @@ cd pkmn-mobile
 npm install --legacy-peer-deps
 
 # Update API_URL in App.tsx with your ngrok URL
+# Example: const API_URL = 'https://your-random-url.ngrok-free.app';
 
 # Start Expo
 npx expo start -c --tunnel
@@ -181,7 +208,7 @@ The mobile application is built with React Native + Expo.
 
 ## 🌐 API
 
-Backend built with FastAPI.
+Backend built with FastAPI, accessible via ngrok tunnel.
 
 ### Endpoints
 
@@ -189,48 +216,64 @@ Backend built with FastAPI.
 |--------|----------|-------------|
 | POST   | /classify-pokemon/ | Upload image for classification |
 | GET    | /result/{request_id} | Retrieve classification result |
+| GET    | /health | Health check |
 
-Docs: [http://localhost:8000/docs](http://localhost:8000/docs) <br>
-Swagger: [http://localhost:8000/swagger](http://localhost:8000/swagger)
+**Documentation:**
+- ReDoc: `https://your-ngrok-url/docs`
+- Swagger: `https://your-ngrok-url/swagger`
+- Local: `http://your-ngrok-url/docs`
+
+## 🔐 Security Features
+
+- **Encrypted Redis Cache** - All classification results encrypted at rest using Fernet (AES-128)
+- **Rate-Limited PokeAPI Access** - 0.5s delay between requests
+- **Restart Limits** - Services limited to 3 restart attempts
+- **Compressed Images** - Auto-compressed to 800x800 max
+- **Health Checks** - All services monitored
 
 ## 🧠 Machine Learning Classifier
 
 Powered by Transformers ViT.
 
-### Model Architecture
+### Model Details
 
-- Vision Transformer encoder
-- Dense layers for classification
-- Softmax output across Pokémon species
-
-Trained on a curated Pokémon dataset.
+- **Model:** `skshmjn/Pokemon-classifier-gen9-1025`
+- **Architecture:** Vision Transformer encoder
+- **Training Data:** 1000+ Pokémon across all generations
+- **Inference Time:** 2-3 seconds per image
+- **Confidence Threshold:** 50% (returns "Unknown" below)
 
 ## 📊 Database
 
 PostgreSQL, with tables for:
 
-- pokemon
-- images
-- stats
-- abilities
-- moves
-- types
-
+- pokemon (basic info: height, weight, base XP)
+- images (sprites & official artwork URLs)
+- stats (HP, Attack, Defense, etc.)
+- abilities (regular & hidden)
+- moves (with learn methods)
+- types (Fire, Water, etc.)
 
 ## 🔧 Development Tools
 
-- Docker for containerization
-- Docker Compose for local orchestration
-- ngrok for exposing API to the mobile app
-- Kafka for distributing classification tasks
-- Redis for result caching
+- **Docker** - Containerization
+- **Docker Compose** - Multi-service orchestration with profiles
+- **ngrok** - Secure tunnel to localhost (v3)
+- **Nginx** - Reverse proxy
+- **Kafka** - Message broker for async processing
+- **Redis** - Encrypted result caching
+- **uv** - Fast Python package installer (10-100x faster than pip)
+- **Kafka UI** - Message monitoring at `http://localhost:8080`
 
 ## 🐛 Common Issues
 
-- Mobile won't connect → Update the ngrok URL in `App.tsx`  
-- Model slow first time → Downloads ~400 MB model cache  
-- Expo errors → Use Node 24+, run `npm install --legacy-peer-deps`  
-- Image too large → Auto-compressed to 800×800  
+- **Mobile won't connect** → Verify ngrok URL in `App.tsx` matches `docker logs ngrok`
+- **No encryption key** → Run `python pkmn-api/src/generate_key.py`
+- **Model slow first time** → Downloads ~400 MB model cache from HuggingFace
+- **Expo errors** → Use Node 24+, run `npm install --legacy-peer-deps`
+- **Image too large** → Auto-compressed to 800×800 max
+- **Kafka fails to start** → Wait 90s for startup, auto-restarts enabled
+- **Port already in use** → Check if services already running: `docker ps`
 
 ## 📄 License
 
@@ -238,5 +281,9 @@ See LICENSE.
 
 ## 🙏 Credits
 
-- **PokeAPI** – Pokémon data and stats  
+- **PokeAPI** – Pokémon data and stats ([https://pokeapi.co/](https://pokeapi.co/))
 - **ML Model** – [skshmjn/Pokemon-classifier-gen9-1025](https://huggingface.co/skshmjn/Pokemon-classifier-gen9-1025) (Vision Transformer fine-tuned for Gen 9 Pokémon, Apache-2.0 License)
+
+---
+
+**⭐ Star this repo if you found it helpful!**

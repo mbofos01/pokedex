@@ -1,0 +1,23 @@
+FROM alpine:latest
+RUN apk add --no-cache curl unzip
+
+# Download ngrok v3 for ARM64
+RUN curl -sLo /ngrok.tgz https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-arm64.tgz && \
+    tar -xzf /ngrok.tgz -C /usr/local/bin && \
+    rm /ngrok.tgz
+
+# Create a script to handle authentication and show URL
+RUN echo '#!/bin/sh' > /entrypoint.sh && \
+    echo 'if [ -n "$NGROK_AUTHTOKEN" ]; then' >> /entrypoint.sh && \
+    echo '  ngrok config add-authtoken $NGROK_AUTHTOKEN' >> /entrypoint.sh && \
+    echo 'fi' >> /entrypoint.sh && \
+    echo 'echo "🚀 Starting ngrok tunnel..."' >> /entrypoint.sh && \
+    echo 'ngrok "$@" &' >> /entrypoint.sh && \
+    echo 'NGROK_PID=$!' >> /entrypoint.sh && \
+    echo 'sleep 3' >> /entrypoint.sh && \
+    echo 'echo "📡 Ngrok tunnel URL:"' >> /entrypoint.sh && \
+    echo 'curl -s http://localhost:4040/api/tunnels | grep -o "https://[^\"]*"' >> /entrypoint.sh && \
+    echo 'wait $NGROK_PID' >> /entrypoint.sh && \
+    chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
