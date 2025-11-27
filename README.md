@@ -219,8 +219,9 @@ Backend built with FastAPI, accessible via ngrok tunnel.
 | GET    | /health | Health check |
 
 **Documentation:**
-- ReDoc: `https://your-ngrok-url/docs`
-- Swagger: `https://your-ngrok-url/swagger`
+- ReDoc: `https://your-ngrok-url/pkmn-api/docs`
+- Swagger: `https://your-ngrok-url/pkmn-api/swagger`
+- Kafka Monitor: `https://your-ngrok-url/`
 
 ## 🔐 Security Features
 
