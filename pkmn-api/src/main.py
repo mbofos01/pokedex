@@ -19,7 +19,9 @@ from dotenv import load_dotenv
 app = FastAPI(
     title="Pokemon Classifier API",
     docs_url="/swagger",
-    redoc_url="/docs"
+    redoc_url="/docs",
+    openapi_url="/openapi.json",
+    root_path="/pkmn-api"   # Important for reverse proxy
 )
 
 # Load .env file from same directory
@@ -217,8 +219,8 @@ async def startup_event():
 
 @app.get("/", include_in_schema=False)
 async def root():
-    """Redirect root to ReDoc documentation"""
-    return RedirectResponse(url="/swagger")
+    # Use root_path dynamically so redirect works behind proxy
+    return RedirectResponse(url=app.root_path + "/swagger")
 
 @app.get("/health")
 async def health_check():

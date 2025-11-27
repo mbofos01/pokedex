@@ -11,7 +11,7 @@ import { ResultDisplay } from "./components/ResultDisplay";
 import { PokemonDetails } from "./components/PokemonDetails";
 
 // Replace with YOUR ngrok URL from the terminal output
-const API_URL = 'https://gaugeable-arlyne-rewarding.ngrok-free.dev';
+const API_URL = "https://gaugeable-arlyne-rewarding.ngrok-free.dev/pkmn-api/";
 
 interface PokemonDetails {
   id: number;
