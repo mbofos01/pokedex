@@ -132,7 +132,6 @@ services:
       color: "#FFCCBC"
       border-color: "#E64A19"
       border-width: "3px"
-      border-style: "dashed"
 
   redis:
     image: redis:7-alpine
