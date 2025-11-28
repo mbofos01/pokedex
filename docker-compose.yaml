@@ -291,8 +291,6 @@ services:
   portainer:
     image: portainer/portainer-ce:latest
     container_name: portainer
-    profiles:
-      - classifier
     ports:
       - "9443:9443"
       - "9000:9000"
@@ -305,14 +303,12 @@ services:
       - web
     x-wharfmap:
       color: "#E1F5FE"
-      border-color: "#0277BD"
+      border-color: "#0c4667ff"
       border-width: "3px"
 
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
-    profiles:
-      - classifier
     ports:
       - "3000:3000"
     environment:
@@ -329,7 +325,7 @@ services:
       postgres:
         condition: service_healthy
     x-wharfmap:
-      color: "#FFF3E0"
+      color: "#cc382b76"
       border-color: "#E65100"
       border-width: "3px"
 

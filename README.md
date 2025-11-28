@@ -24,6 +24,8 @@ AI-powered Pokémon classifier with mobile app. Snap a photo to identify Pokémo
         ngrok:::custom_ngrok
       end
       postgres:::custom_postgres
+      portainer:::custom_portainer
+      grafana:::custom_grafana
       pkmn-fetcher -->|depends_on: service_healthy| postgres
       kafka -->|depends_on: service_healthy| zookeeper
       pkmn-api -->|depends_on: service_healthy| postgres
@@ -33,6 +35,7 @@ AI-powered Pokémon classifier with mobile app. Snap a photo to identify Pokémo
       kafka-ui -->|depends_on: service_healthy| kafka
       nginx -->|depends_on: service_healthy| pkmn-api
       ngrok -->|depends_on| nginx
+      grafana -->|depends_on: service_healthy| postgres
       classDef profileService fill:#FFF9C4,stroke:#F57F17,stroke-width:2px;
       classDef multiProfileService fill:#FFE082,stroke:#E65100,stroke-width:3px,stroke-dasharray: 5 5;
       classDef custom_postgres fill:#BBDEFB,stroke:#1976D2,stroke-width:3px,stroke-dasharray: 5 5;
@@ -45,6 +48,8 @@ AI-powered Pokémon classifier with mobile app. Snap a photo to identify Pokémo
       classDef custom_kafka-ui fill:#E3F2FD,stroke:#1976D2,stroke-width:3px;
       classDef custom_nginx fill:#FFF9C4,stroke:#F57F17,stroke-width:3px;
       classDef custom_ngrok fill:#D1C4E9,stroke:#512DA8,stroke-width:3px;
+      classDef custom_portainer fill:#E1F5FE,stroke:#0c4667ff,stroke-width:3px;
+      classDef custom_grafana fill:#cc382b76,stroke:#E65100,stroke-width:3px;
       style Profile_setup fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px
       style Profile_classifier fill:#FFF3E0,stroke:#E65100,stroke-width:2px
       linkStyle 0 stroke-width:2px,stroke-dasharray:5 5
@@ -55,6 +60,8 @@ AI-powered Pokémon classifier with mobile app. Snap a photo to identify Pokémo
       linkStyle 5 stroke-width:2px,stroke-dasharray:5 5
       linkStyle 6 stroke-width:2px,stroke-dasharray:5 5
       linkStyle 7 stroke-width:2px,stroke-dasharray:5 5
+      linkStyle 9 stroke-width:2px,stroke-dasharray:5 5
+
 ```
 
 ## 🎯 What It Does
@@ -81,17 +88,19 @@ A microservices-based system designed for scalability and maintainability.
 
 ## 📦 Components
 
-| Component       | Technology                 | Port         | Status |
-|----------------|----------------------------|---------------|--------|
-| Mobile App     | React Native + Expo        | –             | ✅     |
-| API Gateway    | FastAPI                    | 8000          | ✅     |
-| ML Classifier  | Transformers (ViT)         | –             | ✅     |
-| Message Broker | Apache Kafka + Zookeeper   | 29092 / 2181  | ✅     |
-| Database       | PostgreSQL                 | 5432          | ✅     |
-| Cache          | Redis (encrypted)          | 6379          | ✅     |
-| Reverse Proxy  | Nginx                      | 80            | ✅     |
-| Tunnel         | ngrok                      | –             | ✅     |
-| Monitoring     | Kafka UI                   | 8080          | ✅     |
+| Component            | Technology                 | Port          | Status |
+|----------------------|----------------------------|---------------|--------|
+| Mobile App           | React Native + Expo        | –             | ✅     |
+| API Gateway          | FastAPI                    | 8000          | ✅     |
+| ML Classifier        | Transformers (ViT)         | –             | ✅     |
+| Message Broker       | Apache Kafka + Zookeeper   | 29092 / 2181  | ✅     |
+| Database             | PostgreSQL                 | 5432          | ✅     |
+| Cache                | Redis (encrypted)          | 6379          | ✅     |
+| Reverse Proxy        | Nginx                      | 80            | ✅     |
+| Tunnel               | ngrok                      | –             | ✅     |
+| Monitoring           | Kafka UI                   | 8080          | ✅     |
+| Dashboards           | Grafana                    | 3000          | ✅     |
+| Container Management | Portainer                  | 9000          | ✅     |
 
 ## 🎮 Features
 
@@ -104,6 +113,8 @@ A microservices-based system designed for scalability and maintainability.
 - 🔐 Encrypted data at rest (Redis)
 - 🌐 Public API access via ngrok tunnel
 - 🧭 Classic Pokédex-style UI  
+- 📊 Real-time analytics dashboards (Grafana)
+- 🖥️ Container management UI (Portainer)
 
 ## 🚀 Quick Start
 
@@ -168,6 +179,8 @@ docker-compose --profile classifier up
 # ✓ Kafka UI (8080)
 # ✓ Nginx (80)
 # ✓ ngrok - public tunnel
+# ✓ Grafana (3000)
+# ✓ Portainer (9000)
 ```
 
 ### 4. Get Your Public URL
@@ -222,6 +235,16 @@ Backend built with FastAPI, accessible via ngrok tunnel.
 - ReDoc: `https://your-ngrok-url/pkmn-api/docs`
 - Swagger: `https://your-ngrok-url/pkmn-api/swagger`
 - Kafka Monitor: `https://your-ngrok-url/`
+
+## 📊 Dashboards & Monitoring
+
+- **Grafana Dashboards:**  
+  Access real-time analytics at `http://localhost:3000`.
+  Dashboards include scan statistics, confidence scores, most scanned Pokémon, and more.
+
+- **Portainer:**  
+  Manage and monitor your Docker containers at `http://localhost:9000`.
+  Useful for viewing logs, restarting services, and resource usage.
 
 ## 🔐 Security Features
 
