@@ -287,9 +287,30 @@ services:
       border-color: "#512DA8"
       border-width: "3px"
 
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    profiles:
+      - classifier
+    ports:
+      - "9443:9443"
+      - "9000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    restart: unless-stopped
+    command: --log-level=ERROR
+    networks:
+      - web
+    x-wharfmap:
+      color: "#E1F5FE"
+      border-color: "#0277BD"
+      border-width: "3px"
+
 volumes:
   pkmn_data:
   redis_data:
+  portainer_data:
 
 networks:
   web:
