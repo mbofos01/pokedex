@@ -16,6 +16,9 @@ from cryptography.fernet import Fernet
 import base64
 from dotenv import load_dotenv
 
+# Import analytics logging functions (use relative import)
+from .analytics import log_pokemon_scan, log_api_request
+
 app = FastAPI(
     title="Pokemon Classifier API",
     docs_url="/swagger",
@@ -208,6 +211,25 @@ def consume_results():
                 encrypted_result
             )
             print(f"✓ Received result for request_id: {request_id}")
+            
+            confidence = data.get('confidence')
+            # Log scan to analytics if prediction is valid
+            if pokemon_name and pokemon_name != 'Unknown' and pokemon_details:
+                log_pokemon_scan(
+                    pokemon_id=pokemon_details['id'],
+                    pokemon_name=pokemon_name,
+                    confidence_score=confidence,
+                    user_id=data.get('user_id', None),
+                    source="api"
+                )
+            elif pokemon_name and pokemon_name == 'Unknown':
+                log_pokemon_scan(
+                    pokemon_id=-1,
+                    pokemon_name='Unknown',
+                    confidence_score=confidence,
+                    user_id=data.get('user_id', None),
+                    source="api"
+                )
 
 # Start consumer thread on startup
 @app.on_event("startup")
@@ -284,14 +306,23 @@ async def classify_pokemon(file: UploadFile = File(...)):
         print(f"Sending to Kafka: request_id={request_id}, hex_size={len(hex_string)}")
         future = producer.send(KAFKA_INPUT_TOPIC, message)
         future.get(timeout=10)  # Wait for confirmation
-        
+
+        # Log API request to analytics
+        log_api_request(
+            endpoint="/classify-pokemon/",
+            method="POST",
+            status_code=200,
+            response_time_ms=0,  # You can measure actual time if needed
+            user_agent=None,
+            ip_address=None
+        )
+
         return {
             "status": "processing",
             "request_id": request_id,
             "filename": file.filename,
             "message": "Image sent for classification. Use /result/{request_id} to get the prediction."
         }
-        
     except Exception as e:
         import traceback
         error_details = traceback.format_exc()

@@ -28,6 +28,7 @@ services:
       - "5432:5432"
     volumes:
       - pkmn_data:/var/lib/postgresql/data
+      - ./database-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "sh -c 'pg_isready -U pkmn -d pokedex'"]
       interval: 10s
@@ -307,10 +308,36 @@ services:
       border-color: "#0277BD"
       border-width: "3px"
 
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    profiles:
+      - classifier
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_LOG_LEVEL=error
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - web
+    depends_on:
+      postgres:
+        condition: service_healthy
+    x-wharfmap:
+      color: "#FFF3E0"
+      border-color: "#E65100"
+      border-width: "3px"
+
 volumes:
   pkmn_data:
   redis_data:
   portainer_data:
+  grafana_data:
 
 networks:
   web:

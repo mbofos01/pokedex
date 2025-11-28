@@ -113,71 +113,8 @@ conn = psycopg2.connect(
 )
 cur = conn.cursor()
 
-# -----------------------
-# Create tables
-# -----------------------
-cur.execute("""
-CREATE TABLE IF NOT EXISTS pokemon (
-    id SERIAL PRIMARY KEY,
-    name TEXT,
-    height INT,
-    weight INT,
-    base_experience INT,
-    order_num INT,
-    is_default BOOLEAN,
-    species_name TEXT
-);
-""")
-
-cur.execute("""
-CREATE TABLE IF NOT EXISTS types (
-    pokemon_id INT REFERENCES pokemon(id),
-    type_name TEXT,
-    PRIMARY KEY (pokemon_id, type_name)
-);
-""")
-
-cur.execute("""
-CREATE TABLE IF NOT EXISTS abilities (
-    pokemon_id INT REFERENCES pokemon(id),
-    ability_name TEXT,
-    is_hidden BOOLEAN,
-    slot INT,
-    PRIMARY KEY (pokemon_id, ability_name)
-);
-""")
-
-cur.execute("""
-CREATE TABLE IF NOT EXISTS stats (
-    pokemon_id INT REFERENCES pokemon(id),
-    stat_name TEXT,
-    base_stat INT,
-    effort INT,
-    PRIMARY KEY (pokemon_id, stat_name)
-);
-""")
-
-cur.execute("""
-CREATE TABLE IF NOT EXISTS moves (
-    pokemon_id INT REFERENCES pokemon(id),
-    move_name TEXT,
-    method TEXT,
-    level INT,
-    version_group TEXT,
-    PRIMARY KEY (pokemon_id, move_name, method, version_group)
-);
-""")
-
-cur.execute("""
-CREATE TABLE IF NOT EXISTS images (
-    pokemon_id INT REFERENCES pokemon(id),
-    image_type TEXT,
-    url TEXT,
-    PRIMARY KEY (pokemon_id, image_type)
-);
-""")
-conn.commit()
-
+# Tables are now created by init-pokedex-schema.sql
+# No need to create them here anymore
 
 def insert_pokemon(p):
     info = get_basic_info(p)
