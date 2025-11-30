@@ -9,58 +9,62 @@ AI-powered Pokémon classifier with mobile app. Snap a photo to identify Pokémo
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"background":"#ffffff"}}}%%
-    graph TD
+  graph BT
+    subgraph Network_web[<b>Network: web</b>]
       subgraph Profile_setup[<b>Profile: setup</b>]
-        pkmn-fetcher:::custom_pkmn-fetcher
+        pkmn-fetcher["<b>pkmn-fetcher</b>"]
       end
+    style Profile_setup fill:#E8F5E9,stroke:#2E7D32,stroke-width:2
       subgraph Profile_classifier[<b>Profile: classifier</b>]
-        zookeeper:::custom_zookeeper
-        kafka:::custom_kafka
-        redis:::custom_redis
-        pkmn-api:::custom_pkmn-api
-        pkmn-classifier:::custom_pkmn-classifier
-        kafka-ui:::custom_kafka-ui
-        nginx:::custom_nginx
-        ngrok:::custom_ngrok
+        zookeeper["<b>zookeeper</b>"]
+        kafka["<b>kafka</b>"]
+        redis["<b>redis</b>"]
+        pkmn-api["<b>pkmn-api</b>"]
+        pkmn-classifier["<b>pkmn-classifier</b>"]
+        kafka-ui["<b>kafka-ui</b>"]
+        nginx["<b>nginx</b>"]
+        ngrok["<b>ngrok</b>"]
       end
-      postgres:::custom_postgres
-      portainer:::custom_portainer
-      grafana:::custom_grafana
-      pkmn-fetcher -->|depends_on: service_healthy| postgres
-      kafka -->|depends_on: service_healthy| zookeeper
-      pkmn-api -->|depends_on: service_healthy| postgres
-      pkmn-api -->|depends_on: service_healthy| kafka
-      pkmn-api -->|depends_on: service_healthy| redis
-      pkmn-classifier -->|depends_on: service_healthy| kafka
-      kafka-ui -->|depends_on: service_healthy| kafka
-      nginx -->|depends_on: service_healthy| pkmn-api
-      ngrok -->|depends_on| nginx
-      grafana -->|depends_on: service_healthy| postgres
-      classDef profileService fill:#FFF9C4,stroke:#F57F17,stroke-width:2px;
-      classDef multiProfileService fill:#FFE082,stroke:#E65100,stroke-width:3px,stroke-dasharray: 5 5;
-      classDef custom_postgres fill:#BBDEFB,stroke:#1976D2,stroke-width:3px,stroke-dasharray: 5 5;
-      classDef custom_pkmn-fetcher fill:#C8E6C9,stroke:#388E3C,stroke-width:3px;
-      classDef custom_zookeeper fill:#E1BEE7,stroke:#7B1FA2,stroke-width:3px;
-      classDef custom_kafka fill:#FFCCBC,stroke:#E64A19,stroke-width:3px;
-      classDef custom_redis fill:#FFCDD2,stroke:#C62828,stroke-width:3px;
-      classDef custom_pkmn-api fill:#FFE082,stroke:#F57C00,stroke-width:3px;
-      classDef custom_pkmn-classifier fill:#C5CAE9,stroke:#303F9F,stroke-width:3px;
-      classDef custom_kafka-ui fill:#E3F2FD,stroke:#1976D2,stroke-width:3px;
-      classDef custom_nginx fill:#FFF9C4,stroke:#F57F17,stroke-width:3px;
-      classDef custom_ngrok fill:#D1C4E9,stroke:#512DA8,stroke-width:3px;
-      classDef custom_portainer fill:#E1F5FE,stroke:#0c4667ff,stroke-width:3px;
-      classDef custom_grafana fill:#cc382b76,stroke:#E65100,stroke-width:3px;
-      style Profile_setup fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px
-      style Profile_classifier fill:#FFF3E0,stroke:#E65100,stroke-width:2px
-      linkStyle 0 stroke-width:2px,stroke-dasharray:5 5
-      linkStyle 1 stroke-width:2px,stroke-dasharray:5 5
-      linkStyle 2 stroke-width:2px,stroke-dasharray:5 5
-      linkStyle 3 stroke-width:2px,stroke-dasharray:5 5
-      linkStyle 4 stroke-width:2px,stroke-dasharray:5 5
-      linkStyle 5 stroke-width:2px,stroke-dasharray:5 5
-      linkStyle 6 stroke-width:2px,stroke-dasharray:5 5
-      linkStyle 7 stroke-width:2px,stroke-dasharray:5 5
-      linkStyle 9 stroke-width:2px,stroke-dasharray:5 5
+    style Profile_classifier fill:#FFF3E0,stroke:#E65100,stroke-width:2
+      postgres["<b>postgres</b>"]
+      portainer["<b>portainer</b>"]
+      grafana["<b>grafana</b>"]
+    end
+    postgres["<b>postgres</b>"]
+    portainer["<b>portainer</b>"]
+    grafana["<b>grafana</b>"]
+    pkmn-fetcher -- depends_on (service_healthy) --> postgres
+    linkStyle 0 stroke-width:2,stroke-dasharray:5 5
+    kafka -- depends_on (service_healthy) --> zookeeper
+    linkStyle 1 stroke-width:2,stroke-dasharray:5 5
+    pkmn-api -- depends_on (service_healthy) --> postgres
+    linkStyle 2 stroke-width:2,stroke-dasharray:5 5
+    pkmn-api -- depends_on (service_healthy) --> kafka
+    linkStyle 3 stroke-width:2,stroke-dasharray:5 5
+    pkmn-api -- depends_on (service_healthy) --> redis
+    linkStyle 4 stroke-width:2,stroke-dasharray:5 5
+    pkmn-classifier -- depends_on (service_healthy) --> kafka
+    linkStyle 5 stroke-width:2,stroke-dasharray:5 5
+    kafka-ui -- depends_on (service_healthy) --> kafka
+    linkStyle 6 stroke-width:2,stroke-dasharray:5 5
+    nginx -- depends_on (service_healthy) --> pkmn-api
+    linkStyle 7 stroke-width:2,stroke-dasharray:5 5
+    ngrok -- depends_on --> nginx
+    grafana -- depends_on (service_healthy) --> postgres
+    linkStyle 9 stroke-width:2,stroke-dasharray:5 5
+    style postgres fill:#BBDEFB,stroke:#1976D2,stroke-width:3,stroke-dasharray:5 5
+    style pkmn-fetcher fill:#C8E6C9,stroke:#388E3C,stroke-width:3
+    style zookeeper fill:#E1BEE7,stroke:#7B1FA2,stroke-width:3
+    style kafka fill:#FFCCBC,stroke:#E64A19,stroke-width:3
+    style redis fill:#FFCDD2,stroke:#C62828,stroke-width:3
+    style pkmn-api fill:#FFE082,stroke:#F57C00,stroke-width:3
+    style pkmn-classifier fill:#C5CAE9,stroke:#303F9F,stroke-width:3
+    style kafka-ui fill:#E3F2FD,stroke:#1976D2,stroke-width:3
+    style nginx fill:#FFF9C4,stroke:#F57F17,stroke-width:3
+    style ngrok fill:#D1C4E9,stroke:#512DA8,stroke-width:3
+    style portainer fill:#E1F5FE,stroke:#0c4667ff,stroke-width:3
+    style grafana fill:#cc382b76,stroke:#E65100,stroke-width:3
+
 
 ```
 
