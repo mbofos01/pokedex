@@ -19,6 +19,7 @@
                         "mode": "thresholds"
                     },
                     "mappings": [],
+                    "max": 1,
                     "thresholds": {
                         "mode": "absolute",
                         "steps": [
@@ -28,7 +29,7 @@
                             }
                         ]
                     },
-                    "unit": "short"
+                    "unit": "percentunit"
                 }
             },
             "gridPos": {
@@ -39,10 +40,8 @@
             },
             "id": 1,
             "options": {
-                "colorMode": "value",
-                "graphMode": "area",
-                "justifyMode": "auto",
-                "orientation": "auto",
+                "showThresholdLabels": false,
+                "showThresholdMarkers": true,
                 "reduceOptions": {
                     "values": false,
                     "calcs": [
@@ -50,7 +49,7 @@
                     ],
                     "fields": ""
                 },
-                "textMode": "auto"
+                "orientation": "auto"
             },
             "targets": [
                 {
@@ -59,14 +58,74 @@
                         "uid": "postgres"
                     },
                     "format": "table",
-                    "rawSql": "SELECT COUNT(*) as value FROM pokemon_scans WHERE pokemon_name = 'Unknown';",
+                    "rawSql": "SELECT (COUNT(*) FILTER (WHERE pokemon_name = 'Unknown'))::float / NULLIF(COUNT(*),0) AS value FROM pokemon_scans;",
                     "refId": "A"
                 }
             ],
-            "title": "Unknown Classifications",
-            "type": "stat"
+            "title": "Unknown Classifications (%)",
+            "type": "gauge"
         },
+       
         {
+            "datasource": {
+                "type": "postgres",
+                "uid": "postgres"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "max": 1,
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "purple",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "unit": "percentunit",
+                    "decimals": 2
+                }
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 6,
+                "y": 0
+            },
+            "id": 2,
+            "options": {
+                "showThresholdLabels": false,
+                "showThresholdMarkers": true,
+                "reduceOptions": {
+                    "values": false,
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": ""
+                },
+                "orientation": "auto"
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "postgres",
+                        "uid": "postgres"
+                    },
+                    "format": "table",
+                    "rawSql": "SELECT ROUND(AVG(confidence_score)::numeric, 2) as value FROM pokemon_scans WHERE confidence_score IS NOT NULL;",
+                    "refId": "A"
+                }
+            ],
+            "title": "Avg Confidence Score",
+            "type": "gauge"
+        },
+
+         {
             "datasource": {
                 "type": "postgres",
                 "uid": "postgres"
@@ -87,65 +146,6 @@
                         ]
                     },
                     "unit": "short"
-                }
-            },
-            "gridPos": {
-                "h": 4,
-                "w": 6,
-                "x": 6,
-                "y": 0
-            },
-            "id": 2,
-            "options": {
-                "colorMode": "value",
-                "graphMode": "area",
-                "justifyMode": "auto",
-                "orientation": "auto",
-                "reduceOptions": {
-                    "values": false,
-                    "calcs": [
-                        "lastNotNull"
-                    ],
-                    "fields": ""
-                },
-                "textMode": "auto"
-            },
-            "targets": [
-                {
-                    "datasource": {
-                        "type": "postgres",
-                        "uid": "postgres"
-                    },
-                    "format": "table",
-                    "rawSql": "SELECT COUNT(DISTINCT pokemon_id) as value FROM pokemon_scans;",
-                    "refId": "A"
-                }
-            ],
-            "title": "Unique Pokemon Scanned",
-            "type": "stat"
-        },
-        {
-            "datasource": {
-                "type": "postgres",
-                "uid": "postgres"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "thresholds"
-                    },
-                    "mappings": [],
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "purple",
-                                "value": null
-                            }
-                        ]
-                    },
-                    "unit": "short",
-                    "decimals": 2
                 }
             },
             "gridPos": {
@@ -176,13 +176,14 @@
                         "uid": "postgres"
                     },
                     "format": "table",
-                    "rawSql": "SELECT ROUND(AVG(confidence_score)::numeric, 2) as value FROM pokemon_scans WHERE confidence_score IS NOT NULL;",
+                    "rawSql": "SELECT COUNT(DISTINCT pokemon_id) as value FROM pokemon_scans;",
                     "refId": "A"
                 }
             ],
-            "title": "Avg Confidence Score",
+            "title": "Unique Pokemon Scanned",
             "type": "stat"
         },
+
         {
             "datasource": {
                 "type": "postgres",
