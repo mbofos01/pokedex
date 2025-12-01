@@ -9,61 +9,70 @@ AI-powered Pokémon classifier with mobile app. Snap a photo to identify Pokémo
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"background":"#ffffff"}}}%%
-  graph BT
-    subgraph Network_web[<b>Network: web</b>]
-      subgraph Profile_setup[<b>Profile: setup</b>]
-        pkmn-fetcher["<b>pkmn-fetcher</b>"]
-      end
-    style Profile_setup fill:#E8F5E9,stroke:#2E7D32,stroke-width:2
-      subgraph Profile_classifier[<b>Profile: classifier</b>]
-        zookeeper["<b>zookeeper</b>"]
-        kafka["<b>kafka</b>"]
-        redis["<b>redis</b>"]
-        pkmn-api["<b>pkmn-api</b>"]
-        pkmn-classifier["<b>pkmn-classifier</b>"]
-        kafka-ui["<b>kafka-ui</b>"]
-        nginx["<b>nginx</b>"]
-        ngrok["<b>ngrok</b>"]
-      end
-    style Profile_classifier fill:#FFF3E0,stroke:#E65100,stroke-width:2
-      postgres["<b>postgres</b>"]
-      portainer["<b>portainer</b>"]
-      grafana["<b>grafana</b>"]
+graph BT
+  subgraph Network_web[<b>Network: web</b>]
+    subgraph Profile_setup[<b>Profile: setup</b>]
+      pkmn-fetcher["<b>pkmn-fetcher</b>"]
     end
-    postgres["<b>postgres</b>"]
+  style Profile_setup fill:#E8F5E9,stroke:#2E7D32,stroke-width:2
+    subgraph Profile_classifier[<b>Profile: classifier</b>]
+      zookeeper["<b>zookeeper</b>"]
+      kafka["<b>kafka</b>"]
+      redis["<b>redis</b>"]
+      pkmn-api["<b>pkmn-api</b>"]
+      pkmn-classifier["<b>pkmn-classifier</b>"]
+      kafka-ui["<b>kafka-ui</b>"]
+      nginx["<b>nginx</b>"]
+      ngrok["<b>ngrok</b>"]
+    end
+  style Profile_classifier fill:#FFF3E0,stroke:#E65100,stroke-width:2
+    pkmn-db["<b>pkmn-db</b>"]
     portainer["<b>portainer</b>"]
     grafana["<b>grafana</b>"]
-    pkmn-fetcher -- depends_on (service_healthy) --> postgres
-    linkStyle 0 stroke-width:2,stroke-dasharray:5 5
-    kafka -- depends_on (service_healthy) --> zookeeper
-    linkStyle 1 stroke-width:2,stroke-dasharray:5 5
-    pkmn-api -- depends_on (service_healthy) --> postgres
-    linkStyle 2 stroke-width:2,stroke-dasharray:5 5
-    pkmn-api -- depends_on (service_healthy) --> kafka
-    linkStyle 3 stroke-width:2,stroke-dasharray:5 5
-    pkmn-api -- depends_on (service_healthy) --> redis
-    linkStyle 4 stroke-width:2,stroke-dasharray:5 5
-    pkmn-classifier -- depends_on (service_healthy) --> kafka
-    linkStyle 5 stroke-width:2,stroke-dasharray:5 5
-    kafka-ui -- depends_on (service_healthy) --> kafka
-    linkStyle 6 stroke-width:2,stroke-dasharray:5 5
-    nginx -- depends_on (service_healthy) --> pkmn-api
-    linkStyle 7 stroke-width:2,stroke-dasharray:5 5
-    ngrok -- depends_on --> nginx
-    grafana -- depends_on (service_healthy) --> postgres
-    linkStyle 9 stroke-width:2,stroke-dasharray:5 5
-    style postgres fill:#BBDEFB,stroke:#1976D2,stroke-width:3,stroke-dasharray:5 5
-    style pkmn-fetcher fill:#C8E6C9,stroke:#388E3C,stroke-width:3
-    style zookeeper fill:#E1BEE7,stroke:#7B1FA2,stroke-width:3
-    style kafka fill:#FFCCBC,stroke:#E64A19,stroke-width:3
-    style redis fill:#FFCDD2,stroke:#C62828,stroke-width:3
-    style pkmn-api fill:#FFE082,stroke:#F57C00,stroke-width:3
-    style pkmn-classifier fill:#C5CAE9,stroke:#303F9F,stroke-width:3
-    style kafka-ui fill:#E3F2FD,stroke:#1976D2,stroke-width:3
-    style nginx fill:#FFF9C4,stroke:#F57F17,stroke-width:3
-    style ngrok fill:#D1C4E9,stroke:#512DA8,stroke-width:3
-    style portainer fill:#E1F5FE,stroke:#0c4667ff,stroke-width:3
-    style grafana fill:#cc382b76,stroke:#E65100,stroke-width:3
+    node-exporter["<b>node-exporter</b>"]
+    prometheus["<b>prometheus</b>"]
+  end
+  pkmn-db["<b>pkmn-db</b>"]
+  portainer["<b>portainer</b>"]
+  grafana["<b>grafana</b>"]
+  node-exporter["<b>node-exporter</b>"]
+  prometheus["<b>prometheus</b>"]
+  pkmn-fetcher -- depends_on (service_healthy) --> pkmn-db
+  linkStyle 0 stroke-width:2,stroke-dasharray:5 5
+  kafka -- depends_on (service_healthy) --> zookeeper
+  linkStyle 1 stroke-width:2,stroke-dasharray:5 5
+  pkmn-api -- depends_on (service_healthy) --> pkmn-db
+  linkStyle 2 stroke-width:2,stroke-dasharray:5 5
+  pkmn-api -- depends_on (service_healthy) --> kafka
+  linkStyle 3 stroke-width:2,stroke-dasharray:5 5
+  pkmn-api -- depends_on (service_healthy) --> redis
+  linkStyle 4 stroke-width:2,stroke-dasharray:5 5
+  pkmn-classifier -- depends_on (service_healthy) --> kafka
+  linkStyle 5 stroke-width:2,stroke-dasharray:5 5
+  kafka-ui -- depends_on (service_healthy) --> kafka
+  linkStyle 6 stroke-width:2,stroke-dasharray:5 5
+  nginx -- depends_on (service_healthy) --> pkmn-api
+  linkStyle 7 stroke-width:2,stroke-dasharray:5 5
+  ngrok -- depends_on --> nginx
+  grafana -- depends_on (service_healthy) --> pkmn-db
+  linkStyle 9 stroke-width:2,stroke-dasharray:5 5
+  grafana -- depends_on (service_healthy) --> prometheus
+  linkStyle 10 stroke-width:2,stroke-dasharray:5 5
+  prometheus -- depends_on --> node-exporter
+  style pkmn-db fill:#BBDEFB,stroke:#1976D2,stroke-width:3,stroke-dasharray:5 5
+  style pkmn-fetcher fill:#C8E6C9,stroke:#388E3C,stroke-width:3
+  style zookeeper fill:#E1BEE7,stroke:#7B1FA2,stroke-width:3
+  style kafka fill:#FFCCBC,stroke:#E64A19,stroke-width:3
+  style redis fill:#FFCDD2,stroke:#C62828,stroke-width:3
+  style pkmn-api fill:#FFE082,stroke:#F57C00,stroke-width:3
+  style pkmn-classifier fill:#C5CAE9,stroke:#303F9F,stroke-width:3
+  style kafka-ui fill:#E3F2FD,stroke:#1976D2,stroke-width:3
+  style nginx fill:#FFF9C4,stroke:#F57F17,stroke-width:3
+  style ngrok fill:#D1C4E9,stroke:#512DA8,stroke-width:3
+  style portainer fill:#E1F5FE,stroke:#0c4667ff,stroke-width:3
+  style grafana fill:#cc382b76,stroke:#E65100,stroke-width:3
+  style node-exporter fill:#B2DFDB,stroke:#00897B,stroke-width:3
+  style prometheus fill:#F8BBD0,stroke:#AD1457,stroke-width:3
 
 
 ```
@@ -104,6 +113,8 @@ A microservices-based system designed for scalability and maintainability.
 | Tunnel               | ngrok                      | –             | ✅     |
 | Monitoring           | Kafka UI                   | 8080          | ✅     |
 | Dashboards           | Grafana                    | 3000          | ✅     |
+| Metrics Collector    | Prometheus                 | 9090          | ✅     |
+| Host Metrics         | Node Exporter              | 9100          | ✅     |
 | Container Management | Portainer                  | 9000          | ✅     |
 
 ## 🎮 Features
@@ -119,6 +130,8 @@ A microservices-based system designed for scalability and maintainability.
 - 🧭 Classic Pokédex-style UI  
 - 📊 Real-time analytics dashboards (Grafana)
 - 🖥️ Container management UI (Portainer)
+- 📈 System metrics monitoring (Prometheus + Node Exporter)
+
 
 ## 🚀 Quick Start
 
@@ -185,6 +198,8 @@ docker-compose --profile classifier up
 # ✓ ngrok - public tunnel
 # ✓ Grafana (3000)
 # ✓ Portainer (9000)
+# ✓ Prometheus (9090)
+# ✓ Node Exporter (9100)
 ```
 
 ### 4. Get Your Public URL
@@ -242,10 +257,12 @@ Backend built with FastAPI, accessible via ngrok tunnel.
 
 ## 📊 Dashboards & Monitoring
 
+- **Prometheus** – collects and stores time-series metrics from all services and the host at `http://localhost:9090`.
+- **Node Exporter** – exposes host-level metrics (CPU, memory, disk, network) for Prometheus at `http://localhost:9100`.
+- **Node Exporter** – exposes host-level metrics (CPU, memory, disk, network) for Prometheus.
 - **Grafana Dashboards:**  
   Access real-time analytics at `http://localhost:3000`.
   Dashboards include scan statistics, confidence scores, most scanned Pokémon, and more.
-
 - **Portainer:**  
   Manage and monitor your Docker containers at `http://localhost:9000`.
   Useful for viewing logs, restarting services, and resource usage.
@@ -285,6 +302,8 @@ PostgreSQL, with tables for:
 
 - **Docker** - Containerization
 - **Docker Compose** - Multi-service orchestration with profiles
+- **Prometheus** - Metrics collection and alerting
+- **Node Exporter** - Host-level metrics for Prometheus
 - **ngrok** - Secure tunnel to localhost (v3)
 - **Nginx** - Reverse proxy
 - **Kafka** - Message broker for async processing
