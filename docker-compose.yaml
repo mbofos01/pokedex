@@ -1,4 +1,7 @@
 x-wharfmap:
+  backgroundColor: "#e3c99d"
+  backgroundBorderColor: "#000000"
+  backgroundBorderWidth: 2
   profiles:
     setup:
       color: "#E8F5E9"
@@ -280,7 +283,8 @@ services:
     environment:
       NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
     depends_on:
-      - nginx
+      nginx:
+        condition: service_started
     networks:
       - web
     x-wharfmap:
@@ -363,7 +367,8 @@ services:
     networks:
       - web
     depends_on:
-      - node-exporter
+      node-exporter:
+        condition: service_started
     entrypoint: sh -c "echo 'Welcome to Prometheus!' && exec /bin/prometheus --config.file=/prometheus/prometheus.yml --log.level=error"
     x-wharfmap:
       color: "#F8BBD0"
