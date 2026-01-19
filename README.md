@@ -6,82 +6,8 @@ AI-powered Pokémon classifier with mobile app. Snap a photo to identify Pokémo
 ![Status](https://img.shields.io/badge/Status-Production%20Ready-success)
 ![License](https://img.shields.io/badge/License-GPL%20v3-blue.svg)
 
-```mermaid
-%%{init: {  "theme": "forest",  "themeVariables": {    "background": "#e3c99d"  }}}%%
- graph BT
- subgraph BG[" "]
- direction BT
-  subgraph Network_web[<b>Network: web</b>]
-    subgraph Profile_setup[<b>Profile: setup</b>]
-      pkmn-fetcher["<b>pkmn-fetcher</b><br/><small>python:</small><small>2.7.9</small>"]
-    end
-  style Profile_setup fill:#E8F5E9,stroke:#2E7D32,stroke-width:2
-    subgraph Profile_classifier[<b>Profile: classifier</b>]
-      zookeeper["<b>zookeeper</b><br/><small>cp-zookeeper:</small><small>7.9.1</small>"]
-      kafka["<b>kafka</b><br/><small>cp-kafka:</small><small>7.9.1</small>"]
-      redis["<b>redis</b><br/><small>redis:</small><small>7-alpine</small>"]
-      pkmn-api["<b>pkmn-api</b><br/><small>python:</small><small>2.7.9</small>"]
-      pkmn-classifier["<b>pkmn-classifier</b><br/><small>python:</small><small>2.7.9</small>"]
-      kafka-ui["<b>kafka-ui</b><br/><small>kafka-ui:</small><small>0.0.4 (latest)</small>"]
-      nginx["<b>nginx</b><br/><small>nginx:</small><small>stable-alpine</small>"]
-      ngrok["<b>ngrok</b><br/><small>alpine:</small><small>latest (latest)</small>"]
-    end
-  style Profile_classifier fill:#FFF3E0,stroke:#E65100,stroke-width:2
-    postgres["<b>postgres</b> <small>(pkmn-db)</small><br/><small>postgres:</small><small>15</small>"]
-    portainer["<b>portainer</b><br/><small>portainer-ce:</small><small>windows-amd64-2.0.0 (latest)</small>"]
-    grafana["<b>grafana</b><br/><small>grafana:</small><small>2.1.3 (latest)</small>"]
-    node-exporter["<b>node-exporter</b><br/><small>node-exporter:</small><small>v0.13.0 (latest)</small>"]
-    prometheus["<b>prometheus</b><br/><small>prometheus:</small><small>0.15.0 (latest)</small>"]
-  end
-  style Network_web fill:#c67b7b,stroke:#000000,stroke-width:2,stroke-dasharray:0
-  postgres["<b>postgres</b> <small>(pkmn-db)</small><br/><small>postgres:</small><small>15</small>"]
-  portainer["<b>portainer</b><br/><small>portainer-ce:</small><small>windows-amd64-2.0.0 (latest)</small>"]
-  grafana["<b>grafana</b><br/><small>grafana:</small><small>2.1.3 (latest)</small>"]
-  node-exporter["<b>node-exporter</b><br/><small>node-exporter:</small><small>v0.13.0 (latest)</small>"]
-  prometheus["<b>prometheus</b><br/><small>prometheus:</small><small>0.15.0 (latest)</small>"]
-  end
-  pkmn-fetcher -- depends_on (service_healthy) --> postgres
-  linkStyle 0 stroke-width:2,stroke-dasharray:5 5
-  kafka -- depends_on (service_healthy) --> zookeeper
-  linkStyle 1 stroke-width:2,stroke-dasharray:5 5
-  pkmn-api -- depends_on (service_healthy) --> postgres
-  linkStyle 2 stroke-width:2,stroke-dasharray:5 5
-  pkmn-api -- depends_on (service_healthy) --> kafka
-  linkStyle 3 stroke-width:2,stroke-dasharray:5 5
-  pkmn-api -- depends_on (service_healthy) --> redis
-  linkStyle 4 stroke-width:2,stroke-dasharray:5 5
-  pkmn-classifier -- depends_on (service_healthy) --> kafka
-  linkStyle 5 stroke-width:2,stroke-dasharray:5 5
-  kafka-ui -- depends_on (service_healthy) --> kafka
-  linkStyle 6 stroke-width:2,stroke-dasharray:5 5
-  nginx -- depends_on (service_healthy) --> pkmn-api
-  linkStyle 7 stroke-width:2,stroke-dasharray:5 5
-  ngrok -- depends_on (service_started) --> nginx
-  linkStyle 8 stroke-width:undefined,stroke-dasharray:undefined
-  grafana -- depends_on (service_healthy) --> postgres
-  linkStyle 9 stroke-width:2,stroke-dasharray:5 5
-  grafana -- depends_on (service_healthy) --> prometheus
-  linkStyle 10 stroke-width:2,stroke-dasharray:5 5
-  prometheus -- depends_on (service_started) --> node-exporter
-  linkStyle 11 stroke-width:undefined,stroke-dasharray:undefined
-  style postgres fill:#BBDEFB,stroke:#1976D2,stroke-width:2,stroke-dasharray:5 5
-  style pkmn-fetcher fill:#C8E6C9,stroke:#388E3C,stroke-width:2,stroke-dasharray:0
-  style zookeeper fill:#E1BEE7,stroke:#7B1FA2,stroke-width:2,stroke-dasharray:0
-  style kafka fill:#FFCCBC,stroke:#E64A19,stroke-width:2,stroke-dasharray:0
-  style redis fill:#FFCDD2,stroke:#C62828,stroke-width:2,stroke-dasharray:0
-  style pkmn-api fill:#FFE082,stroke:#F57C00,stroke-width:2,stroke-dasharray:0
-  style pkmn-classifier fill:#C5CAE9,stroke:#303F9F,stroke-width:2,stroke-dasharray:0
-  style kafka-ui fill:#E3F2FD,stroke:#1976D2,stroke-width:2,stroke-dasharray:0
-  style nginx fill:#FFF9C4,stroke:#F57F17,stroke-width:2,stroke-dasharray:0
-  style ngrok fill:#D1C4E9,stroke:#512DA8,stroke-width:2,stroke-dasharray:0
-  style portainer fill:#E1F5FE,stroke:#0c4667ff,stroke-width:2,stroke-dasharray:0
-  style grafana fill:#cc382b76,stroke:#E65100,stroke-width:2,stroke-dasharray:0
-  style node-exporter fill:#B2DFDB,stroke:#00897B,stroke-width:2,stroke-dasharray:0
-  style prometheus fill:#F8BBD0,stroke:#AD1457,stroke-width:2,stroke-dasharray:0
-  style BG fill:#e3c99d,stroke:#000000,stroke-width:2,rx:12,ry:12
+![Docker Compose Architecture](docs/screenshots/docker-compose.svg)
 
-
-```
 
 ## 🎯 What It Does
 
