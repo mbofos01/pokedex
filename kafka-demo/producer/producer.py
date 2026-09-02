@@ -3,6 +3,7 @@ import time
 import uuid
 import signal
 import sys
+from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 from confluent_kafka import SerializingProducer
@@ -95,10 +96,15 @@ def main():
     counter = 0
     while running and counter < MESSAGE_COUNT:
         counter += 1
+        event_time = datetime.now(timezone.utc)
         message = {
             "id": str(uuid.uuid4()),
             "message": f"Hello Kafka #{counter}",
-            "timestamp": int(time.time() * 1000),
+            "timestamp": int(event_time.timestamp() * 1000),
+            "schema_version": 2,
+            "readable_ts": event_time.isoformat(timespec="milliseconds").replace(
+                "+00:00", "Z"
+            ),
         }
         try:
             print(f"[{counter}/{MESSAGE_COUNT}] Producing: {message}")

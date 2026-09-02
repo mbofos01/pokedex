@@ -75,6 +75,12 @@ the in-network `kafka`/`schema-registry` hostnames instead of `localhost`.
 - Consumer: manual offset commits, only committed after successful processing.
 - Messages are validated against the Avro schema (`schemas/message.avsc`) via Schema Registry on both produce and consume.
 
+## Schema versions
+
+The active schema is version 2 and adds the `schema_version` field with a default
+value, preserving compatibility with version 1 consumers. The previous contract
+is retained in `schemas/message.v1.avsc`.
+
 ## Where does the schema come from?
 
 The schema itself lives in the **Schema Registry**, not on the Kafka broker or in a

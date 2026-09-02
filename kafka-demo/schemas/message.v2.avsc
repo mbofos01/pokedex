@@ -6,11 +6,6 @@
     { "name": "id", "type": "string" },
     { "name": "message", "type": "string" },
     { "name": "timestamp", "type": "long" },
-    { "name": "schema_version", "type": "int", "default": 2 },
-    {
-      "name": "readable_ts",
-      "type": "string",
-      "default": ""
-    }
+    { "name": "schema_version", "type": "int", "default": 2 }
   ]
 }
