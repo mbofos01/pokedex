@@ -1,0 +1,5 @@
+# All generated key material; regenerate with generate-certs.sh
+*.jks
+*.pem
+*.csr
+*.srl

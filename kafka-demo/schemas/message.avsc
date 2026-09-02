@@ -1,0 +1,10 @@
+{
+  "type": "record",
+  "name": "SimpleMessage",
+  "namespace": "com.pokedex.kafkademo",
+  "fields": [
+    { "name": "id", "type": "string" },
+    { "name": "message", "type": "string" },
+    { "name": "timestamp", "type": "long" }
+  ]
+}
