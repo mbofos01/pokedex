@@ -121,15 +121,27 @@ export default function App() {
     setResult(null);
 
     try {
-      // Test API connection first
-      console.log("Testing connection to:", API_URL);
-      const healthCheck = await axios.get(`${API_URL}/health`, {
-        timeout: 5000,
-        headers: {
-          "ngrok-skip-browser-warning": "true",
-        },
+      const requestId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const socketUrl = `${API_URL.replace("https://", "wss://")}/ws/${requestId}`;
+      const socket = new WebSocket(socketUrl);
+
+      await new Promise<void>((resolve, reject) => {
+        socket.onopen = () => resolve();
+        socket.onerror = () => reject(new Error("Could not connect to result stream"));
       });
-      console.log("Health check:", healthCheck.data);
+      socket.onmessage = (event) => {
+        const message = JSON.parse(event.data) as ClassificationResult & {
+          type?: string;
+        };
+        if (message.type === "classification-complete") {
+          setResult(message);
+          setLoading(false);
+          socket.close();
+          if (message.pokemon_details) {
+            setShowDetails(true);
+          }
+        }
+      };
 
       // Upload image
       const formData = new FormData();
@@ -152,6 +164,7 @@ export default function App() {
         {
           headers: {
             "Content-Type": "multipart/form-data",
+            "X-Request-ID": requestId,
             "ngrok-skip-browser-warning": "true",
           },
           timeout: 30000, // Longer timeout
@@ -159,47 +172,11 @@ export default function App() {
       );
 
       console.log("Upload response:", uploadResponse.data);
-      const reqId = uploadResponse.data.request_id;
-
-      // Poll for result
-      let attempts = 0;
-      const maxAttempts = 30;
-
-      const pollInterval = setInterval(async () => {
-        attempts++;
-
-        try {
-          const resultResponse = await axios.get<ClassificationResult>(
-            `${API_URL}/result/${reqId}`,
-            {
-              timeout: 5000,
-              headers: {
-                "ngrok-skip-browser-warning": "true",
-              },
-            }
-          );
-
-          if (resultResponse.data.status === "completed") {
-            setResult(resultResponse.data);
-            setLoading(false);
-            clearInterval(pollInterval);
-            // Show details page if we have Pokemon details
-            if (resultResponse.data.pokemon_details) {
-              setShowDetails(true);
-            }
-          } else if (attempts >= maxAttempts) {
-            setResult({
-              status: "error",
-              request_id: reqId,
-              error: "Timeout waiting for classification",
-            });
-            setLoading(false);
-            clearInterval(pollInterval);
-          }
-        } catch (error) {
-          console.error("Polling error:", error);
-        }
-      }, 2000);
+      socket.onerror = () => {
+        setResult({ status: "error", request_id: requestId, error: "Result stream failed" });
+        setLoading(false);
+        socket.close();
+      };
     } catch (error) {
       console.error("Full error:", error);
       let errorMessage = "Failed to classify image";

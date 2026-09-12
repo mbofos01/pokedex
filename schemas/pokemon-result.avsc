@@ -1,0 +1,13 @@
+{
+  "type": "record",
+  "name": "PokemonResult",
+  "namespace": "com.pokedex.events",
+  "fields": [
+    {"name": "request_id", "type": "string"},
+    {"name": "filename", "type": "string"},
+    {"name": "prediction", "type": "string"},
+    {"name": "confidence", "type": "float"},
+    {"name": "classified_at", "type": "long", "default": 0},
+    {"name": "schema_version", "type": "int", "default": 1}
+  ]
+}

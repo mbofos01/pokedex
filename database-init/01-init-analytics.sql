@@ -1,8 +1,31 @@
 -- Analytics Database Schema for Real-time Pokemon Scan Data
 
+CREATE TABLE IF NOT EXISTS pokemon (
+    id INTEGER PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE
+);
+
+-- Sentinel row for classifications that couldn't be identified
+INSERT INTO pokemon (id, name)
+VALUES (-1, 'Unknown')
+ON CONFLICT (id) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS api_requests (
+    id SERIAL PRIMARY KEY,
+    request_id VARCHAR(100) NOT NULL UNIQUE,
+    endpoint VARCHAR(255) NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    filename VARCHAR(255) NOT NULL,
+    image_bytes NUMERIC DEFAULT 0,
+    client_ip VARCHAR(45),
+    user_agent TEXT,
+    forwarded_for VARCHAR(255)
+);
+
 CREATE TABLE IF NOT EXISTS pokemon_scans (
     id SERIAL PRIMARY KEY,
-    pokemon_id INTEGER NOT NULL,
+    request_id VARCHAR(100) REFERENCES api_requests(request_id),
+    pokemon_id INTEGER NOT NULL REFERENCES pokemon(id),
     pokemon_name VARCHAR(100) NOT NULL,
     confidence_score FLOAT,
     scanned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -10,19 +33,8 @@ CREATE TABLE IF NOT EXISTS pokemon_scans (
     source VARCHAR(50) DEFAULT 'api'
 );
 
-CREATE TABLE IF NOT EXISTS api_requests (
-    id SERIAL PRIMARY KEY,
-    endpoint VARCHAR(255) NOT NULL,
-    method VARCHAR(10) NOT NULL,
-    status_code INTEGER,
-    response_time_ms INTEGER,
-    requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    user_agent TEXT,
-    ip_address VARCHAR(45)
-);
-
 CREATE TABLE IF NOT EXISTS popular_pokemon (
-    pokemon_id INTEGER PRIMARY KEY,
+    pokemon_id INTEGER PRIMARY KEY REFERENCES pokemon(id),
     pokemon_name VARCHAR(100) NOT NULL,
     total_scans INTEGER DEFAULT 0,
     last_scanned_at TIMESTAMP,
@@ -32,7 +44,7 @@ CREATE TABLE IF NOT EXISTS popular_pokemon (
 
 CREATE INDEX IF NOT EXISTS idx_pokemon_scans_pokemon_id ON pokemon_scans(pokemon_id);
 CREATE INDEX IF NOT EXISTS idx_pokemon_scans_scanned_at ON pokemon_scans(scanned_at);
-CREATE INDEX IF NOT EXISTS idx_api_requests_requested_at ON api_requests(requested_at);
+CREATE INDEX IF NOT EXISTS idx_api_requests_timestamp ON api_requests(timestamp);
 
 CREATE OR REPLACE FUNCTION update_popular_pokemon()
 RETURNS TRIGGER AS $$
@@ -51,15 +63,3 @@ DROP TRIGGER IF EXISTS trigger_update_popular_pokemon ON pokemon_scans;
 CREATE TRIGGER trigger_update_popular_pokemon
 AFTER INSERT ON pokemon_scans
 FOR EACH ROW EXECUTE FUNCTION update_popular_pokemon();
-
--- Sample data
--- INSERT INTO pokemon_scans (pokemon_id, pokemon_name, confidence_score, user_id) VALUES
--- (25, 'pikachu', 0.98, 'user_001'),
--- (1, 'bulbasaur', 0.95, 'user_002'),
--- (25, 'pikachu', 0.97, 'user_001'),
--- (4, 'charmander', 0.92, 'user_003'),
--- (25, 'pikachu', 0.99, 'user_004');
-
--- INSERT INTO api_requests (endpoint, method, status_code, response_time_ms) VALUES
--- ('/api/classify', 'POST', 200, 145),
--- ('/api/health', 'GET', 200, 5);

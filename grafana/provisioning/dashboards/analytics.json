@@ -9,115 +9,67 @@
     "links": [],
     "panels": [
         {
-            "datasource": {
-                "type": "postgres",
-                "uid": "postgres"
-            },
+            "datasource": { "type": "postgres", "uid": "postgres" },
             "fieldConfig": {
                 "defaults": {
-                    "color": {
-                        "mode": "thresholds"
-                    },
+                    "color": { "mode": "thresholds" },
                     "mappings": [],
                     "max": 1,
                     "thresholds": {
                         "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "red",
-                                "value": null
-                            }
-                        ]
+                        "steps": [{ "color": "red", "value": null }]
                     },
                     "unit": "percentunit"
                 }
             },
-            "gridPos": {
-                "h": 4,
-                "w": 6,
-                "x": 0,
-                "y": 0
-            },
+            "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
             "id": 1,
             "options": {
                 "showThresholdLabels": false,
                 "showThresholdMarkers": true,
-                "reduceOptions": {
-                    "values": false,
-                    "calcs": [
-                        "lastNotNull"
-                    ],
-                    "fields": ""
-                },
+                "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
                 "orientation": "auto"
             },
             "targets": [
                 {
-                    "datasource": {
-                        "type": "postgres",
-                        "uid": "postgres"
-                    },
+                    "datasource": { "type": "postgres", "uid": "postgres" },
                     "format": "table",
-                    "rawSql": "SELECT (COUNT(*) FILTER (WHERE pokemon_name = 'Unknown'))::float / NULLIF(COUNT(*),0) AS value FROM pokemon_scans;",
+                    "rawSql": "SELECT (COUNT(*) FILTER (WHERE pokemon_name = 'Unknown'))::float / NULLIF(COUNT(*),0) AS value FROM pokemon_scans WHERE $__timeFilter(scanned_at);",
                     "refId": "A"
                 }
             ],
             "title": "Unknown Classifications (%)",
             "type": "gauge"
         },
-       
+
         {
-            "datasource": {
-                "type": "postgres",
-                "uid": "postgres"
-            },
+            "datasource": { "type": "postgres", "uid": "postgres" },
             "fieldConfig": {
                 "defaults": {
-                    "color": {
-                        "mode": "thresholds"
-                    },
+                    "color": { "mode": "thresholds" },
                     "max": 1,
                     "mappings": [],
                     "thresholds": {
                         "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "purple",
-                                "value": null
-                            }
-                        ]
+                        "steps": [{ "color": "purple", "value": null }]
                     },
                     "unit": "percentunit",
                     "decimals": 2
                 }
             },
-            "gridPos": {
-                "h": 4,
-                "w": 6,
-                "x": 6,
-                "y": 0
-            },
+            "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
             "id": 2,
             "options": {
                 "showThresholdLabels": false,
                 "showThresholdMarkers": true,
-                "reduceOptions": {
-                    "values": false,
-                    "calcs": [
-                        "lastNotNull"
-                    ],
-                    "fields": ""
-                },
+                "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
                 "orientation": "auto"
             },
             "targets": [
                 {
-                    "datasource": {
-                        "type": "postgres",
-                        "uid": "postgres"
-                    },
+                    "datasource": { "type": "postgres", "uid": "postgres" },
                     "format": "table",
-                    "rawSql": "SELECT ROUND(AVG(confidence_score)::numeric, 2) as value FROM pokemon_scans WHERE confidence_score IS NOT NULL;",
+                    "rawSql": "SELECT ROUND(AVG(confidence_score)::numeric, 2) as value FROM pokemon_scans WHERE confidence_score IS NOT NULL AND $__timeFilter(scanned_at);",
                     "refId": "A"
                 }
             ],
@@ -125,58 +77,34 @@
             "type": "gauge"
         },
 
-         {
-            "datasource": {
-                "type": "postgres",
-                "uid": "postgres"
-            },
+        {
+            "datasource": { "type": "postgres", "uid": "postgres" },
             "fieldConfig": {
                 "defaults": {
-                    "color": {
-                        "mode": "thresholds"
-                    },
+                    "color": { "mode": "thresholds" },
                     "mappings": [],
                     "thresholds": {
                         "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": null
-                            }
-                        ]
+                        "steps": [{ "color": "green", "value": null }]
                     },
                     "unit": "short"
                 }
             },
-            "gridPos": {
-                "h": 4,
-                "w": 6,
-                "x": 12,
-                "y": 0
-            },
+            "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
             "id": 3,
             "options": {
                 "colorMode": "value",
                 "graphMode": "area",
                 "justifyMode": "auto",
                 "orientation": "auto",
-                "reduceOptions": {
-                    "values": false,
-                    "calcs": [
-                        "lastNotNull"
-                    ],
-                    "fields": ""
-                },
+                "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
                 "textMode": "auto"
             },
             "targets": [
                 {
-                    "datasource": {
-                        "type": "postgres",
-                        "uid": "postgres"
-                    },
+                    "datasource": { "type": "postgres", "uid": "postgres" },
                     "format": "table",
-                    "rawSql": "SELECT COUNT(DISTINCT pokemon_id) as value FROM pokemon_scans;",
+                    "rawSql": "SELECT COUNT(DISTINCT pokemon_id) as value FROM pokemon_scans WHERE $__timeFilter(scanned_at);",
                     "refId": "A"
                 }
             ],
@@ -185,73 +113,80 @@
         },
 
         {
-            "datasource": {
-                "type": "postgres",
-                "uid": "postgres"
-            },
+            "datasource": { "type": "postgres", "uid": "postgres" },
             "fieldConfig": {
                 "defaults": {
-                    "color": {
-                        "mode": "thresholds"
-                    },
+                    "color": { "mode": "thresholds" },
                     "mappings": [],
                     "thresholds": {
                         "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "orange",
-                                "value": null
-                            }
-                        ]
+                        "steps": [{ "color": "orange", "value": null }]
                     },
                     "unit": "short"
                 }
             },
-            "gridPos": {
-                "h": 4,
-                "w": 6,
-                "x": 18,
-                "y": 0
-            },
+            "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
             "id": 4,
             "options": {
                 "colorMode": "value",
                 "graphMode": "area",
                 "justifyMode": "auto",
                 "orientation": "auto",
-                "reduceOptions": {
-                    "values": false,
-                    "calcs": [
-                        "lastNotNull"
-                    ],
-                    "fields": ""
-                },
+                "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
                 "textMode": "auto"
             },
             "targets": [
                 {
-                    "datasource": {
-                        "type": "postgres",
-                        "uid": "postgres"
-                    },
+                    "datasource": { "type": "postgres", "uid": "postgres" },
                     "format": "table",
-                    "rawSql": "SELECT COUNT(*) as value FROM api_requests WHERE requested_at > NOW() - INTERVAL '24 hours';",
+                    "rawSql": "SELECT COUNT(*) as value FROM api_requests WHERE $__timeFilter(timestamp);",
                     "refId": "A"
                 }
             ],
-            "title": "API Requests (24h)",
+            "title": "API Requests",
             "type": "stat"
         },
+
         {
-            "datasource": {
-                "type": "postgres",
-                "uid": "postgres"
-            },
+            "datasource": { "type": "postgres", "uid": "postgres" },
             "fieldConfig": {
                 "defaults": {
-                    "color": {
-                        "mode": "palette-classic"
+                    "color": { "mode": "thresholds" },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [{ "color": "blue", "value": null }]
                     },
+                    "unit": "bytes"
+                }
+            },
+            "gridPos": { "h": 4, "w": 6, "x": 18, "y": 20 },
+            "id": 13,
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+                "textMode": "auto"
+            },
+            "targets": [
+                {
+                    "datasource": { "type": "postgres", "uid": "postgres" },
+                    "format": "table",
+                    "rawSql": "SELECT ROUND(AVG(image_bytes)) as value FROM api_requests WHERE $__timeFilter(timestamp);",
+                    "refId": "A"
+                }
+            ],
+            "title": "Avg Image Size",
+            "type": "stat"
+        },
+
+        {
+            "datasource": { "type": "postgres", "uid": "postgres" },
+            "fieldConfig": {
+                "defaults": {
+                    "color": { "mode": "palette-classic" },
                     "custom": {
                         "axisCenteredZero": false,
                         "axisColorMode": "text",
@@ -259,134 +194,49 @@
                         "axisPlacement": "left",
                         "fillOpacity": 80,
                         "gradientMode": "none",
-                        "hideFrom": {
-                            "tooltip": false,
-                            "viz": false,
-                            "legend": false
-                        },
+                        "hideFrom": { "tooltip": false, "viz": false, "legend": false },
                         "lineWidth": 1,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        }
+                        "scaleDistribution": { "type": "linear" }
                     },
                     "mappings": [],
                     "thresholds": {
                         "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": null
-                            }
-                        ]
+                        "steps": [{ "color": "green", "value": null }]
                     }
                 }
             },
-            "gridPos": {
-                "h": 8,
-                "w": 12,
-                "x": 0,
-                "y": 4
-            },
+            "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
             "id": 5,
             "options": {
                 "barRadius": 0,
                 "barWidth": 0.97,
                 "groupWidth": 0.7,
-                "legend": {
-                    "calcs": [],
-                    "displayMode": "list",
-                    "placement": "bottom",
-                    "showLegend": false
-                },
+                "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": false },
                 "orientation": "horizontal",
                 "showValue": "auto",
                 "stacking": "none",
-                "tooltip": {
-                    "mode": "single",
-                    "sort": "none"
-                }
+                "tooltip": { "mode": "single", "sort": "none" }
             },
             "targets": [
                 {
-                    "datasource": {
-                        "type": "postgres",
-                        "uid": "postgres"
-                    },
+                    "datasource": { "type": "postgres", "uid": "postgres" },
                     "format": "table",
-                    "rawSql": "SELECT pokemon_name as name, total_scans as value FROM popular_pokemon ORDER BY total_scans DESC LIMIT 15;",
+                    "rawSql": "SELECT pokemon_name as name, COUNT(*) as value FROM pokemon_scans WHERE $__timeFilter(scanned_at) GROUP BY pokemon_name ORDER BY value DESC LIMIT 15;",
                     "refId": "A"
                 }
             ],
             "title": "Top 15 Most Scanned Pokemon",
             "type": "table"
         },
+
         {
-            "datasource": {
-                "type": "postgres",
-                "uid": "postgres"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "palette-classic"
-                    },
-                    "custom": {
-                        "axisCenteredZero": false,
-                        "axisColorMode": "text",
-                        "axisLabel": "",
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "drawStyle": "line",
-                        "fillOpacity": 20,
-                        "gradientMode": "none",
-                        "hideFrom": {
-                            "tooltip": false,
-                            "viz": false,
-                            "legend": false
-                        },
-                        "lineInterpolation": "smooth",
-                        "lineWidth": 2,
-                        "pointSize": 5,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        },
-                        "showPoints": "never",
-                        "spanNulls": false,
-                        "stacking": {
-                            "group": "A",
-                            "mode": "none"
-                        },
-                        "thresholdsStyle": {
-                            "mode": "off"
-                        }
-                    },
-                    "mappings": [],
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": null
-                            }
-                        ]
-                    },
-                    "unit": "short"
-                }
-            },
-            "gridPos": {
-                "h": 8,
-                "w": 12,
-                "x": 12,
-                "y": 4
-            },
+            "datasource": { "type": "postgres", "uid": "postgres" },
             "id": 6,
             "type": "timeseries",
-            "title": "Scans Over Time (24h)",
+            "title": "Scan Volume Over Selected Range",
             "fieldConfig": {
                 "defaults": {
-                    "color": {
-                        "mode": "palette-classic"
-                    },
+                    "color": { "mode": "palette-classic" },
                     "custom": {
                         "axisCenteredZero": false,
                         "axisColorMode": "text",
@@ -396,178 +246,229 @@
                         "drawStyle": "line",
                         "fillOpacity": 20,
                         "gradientMode": "none",
-                        "hideFrom": {
-                            "tooltip": false,
-                            "viz": false,
-                            "legend": false
-                        },
+                        "hideFrom": { "tooltip": false, "viz": false, "legend": false },
                         "lineInterpolation": "smooth",
                         "lineWidth": 2,
                         "pointSize": 5,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        },
+                        "scaleDistribution": { "type": "linear" },
                         "showPoints": "auto",
                         "spanNulls": false,
-                        "stacking": {
-                            "group": "A",
-                            "mode": "none"
-                        },
-                        "thresholdsStyle": {
-                            "mode": "off"
-                        }
+                        "stacking": { "group": "A", "mode": "none" },
+                        "thresholdsStyle": { "mode": "off" }
                     },
                     "mappings": [],
                     "thresholds": {
                         "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": null
-                            }
-                        ]
+                        "steps": [{ "color": "green", "value": null }]
                     },
                     "unit": "short"
                 }
             },
-            "gridPos": {
-                "h": 8,
-                "w": 12,
-                "x": 12,
-                "y": 4
-            },
+            "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
             "options": {
-                "legend": {
-                    "calcs": [],
-                    "displayMode": "list",
-                    "placement": "bottom",
-                    "showLegend": true
-                },
-                "tooltip": {
-                    "mode": "multi",
-                    "sort": "none"
-                }
+                "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+                "tooltip": { "mode": "multi", "sort": "none" }
             },
             "targets": [
                 {
-                    "datasource": {
-                        "type": "postgres",
-                        "uid": "postgres"
-                    },
+                    "datasource": { "type": "postgres", "uid": "postgres" },
                     "format": "time_series",
-                    "rawSql": "SELECT DATE_TRUNC('hour', scanned_at) as time, COUNT(*) as value FROM pokemon_scans WHERE scanned_at > NOW() - INTERVAL '24 hours' GROUP BY time ORDER BY time;",
+                    "rawSql": "SELECT $__timeGroup(scanned_at, $__interval) as time, COUNT(*) as value FROM pokemon_scans WHERE $__timeFilter(scanned_at) GROUP BY 1 ORDER BY 1;",
                     "refId": "A"
                 }
             ]
         },
+
         {
-            "datasource": {
-                "type": "postgres",
-                "uid": "postgres"
-            },
+            "datasource": { "type": "postgres", "uid": "postgres" },
             "fieldConfig": {
                 "defaults": {
-                    "color": {
-                        "mode": "thresholds"
-                    },
+                    "color": { "mode": "thresholds" },
                     "custom": {
                         "align": "auto",
-                        "cellOptions": {
-                            "type": "auto"
-                        },
+                        "cellOptions": { "type": "auto" },
                         "inspect": false
                     },
                     "mappings": [],
                     "thresholds": {
                         "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": null
-                            }
-                        ]
+                        "steps": [{ "color": "green", "value": null }]
                     }
                 },
                 "overrides": [
                     {
-                        "matcher": {
-                            "id": "byName",
-                            "options": "avg_confidence"
-                        },
+                        "matcher": { "id": "byName", "options": "avg_confidence" },
                         "properties": [
-                            {
-                                "id": "custom.cellOptions",
-                                "value": {
-                                    "type": "color-background"
-                                }
-                            },
-                            {
-                                "id": "color",
-                                "value": {
-                                    "mode": "continuous-GrYlRd"
-                                }
-                            },
-                            {
-                                "id": "decimals",
-                                "value": 2
-                            }
+                            { "id": "custom.cellOptions", "value": { "type": "color-background" } },
+                            { "id": "color", "value": { "mode": "continuous-GrYlRd" } },
+                            { "id": "decimals", "value": 2 }
                         ]
                     }
                 ]
             },
-            "gridPos": {
-                "h": 8,
-                "w": 24,
-                "x": 0,
-                "y": 12
-            },
+            "gridPos": { "h": 8, "w": 24, "x": 0, "y": 12 },
             "id": 7,
             "options": {
                 "cellHeight": "sm",
-                "footer": {
-                    "countRows": false,
-                    "fields": "",
-                    "reducer": [
-                        "sum"
-                    ],
-                    "show": false
-                },
+                "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
                 "showHeader": true,
-                "sortBy": [
-                    {
-                        "desc": true,
-                        "displayName": "total_scans"
-                    }
-                ]
+                "sortBy": [{ "desc": true, "displayName": "total_scans" }]
             },
             "targets": [
                 {
-                    "datasource": {
-                        "type": "postgres",
-                        "uid": "postgres"
-                    },
+                    "datasource": { "type": "postgres", "uid": "postgres" },
                     "format": "table",
-                    "rawSql": "SELECT pokemon_name, total_scans, ROUND(avg_confidence::numeric, 2) as avg_confidence, last_scanned_at FROM popular_pokemon ORDER BY total_scans DESC LIMIT 50;",
+                    "rawSql": "SELECT pokemon_name, COUNT(*) as total_scans, ROUND(AVG(confidence_score)::numeric, 2) as avg_confidence, MAX(scanned_at) as last_scanned_at FROM pokemon_scans WHERE $__timeFilter(scanned_at) GROUP BY pokemon_name ORDER BY total_scans DESC LIMIT 50;",
                     "refId": "A"
                 }
             ],
             "title": "Popular Pokemon Details",
             "type": "table"
+        },
+
+        {
+            "datasource": { "type": "postgres", "uid": "postgres" },
+            "fieldConfig": {
+                "defaults": {
+                    "color": { "mode": "thresholds" },
+                    "custom": {
+                        "align": "auto",
+                        "cellOptions": { "type": "auto" },
+                        "inspect": false
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [{ "color": "green", "value": null }]
+                    }
+                },
+                "overrides": [
+                    {
+                        "matcher": { "id": "byName", "options": "value" },
+                        "properties": [
+                            { "id": "custom.cellOptions", "value": { "type": "color-background" } },
+                            { "id": "color", "value": { "mode": "continuous-GrYlRd" } }
+                        ]
+                    }
+                ]
+            },
+            "gridPos": { "h": 8, "w": 6, "x": 0, "y": 20 },
+            "id": 9,
+            "options": {
+                "cellHeight": "sm",
+                "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
+                "showHeader": true,
+                "sortBy": [{ "desc": true, "displayName": "value" }]
+            },
+            "targets": [
+                {
+                    "datasource": { "type": "postgres", "uid": "postgres" },
+                    "format": "table",
+                    "rawSql": "SELECT source, COUNT(*) as value FROM pokemon_scans WHERE $__timeFilter(scanned_at) GROUP BY source ORDER BY value DESC;",
+                    "refId": "A"
+                }
+            ],
+            "title": "Scans by Source",
+            "type": "table"
+        },
+
+        {
+            "datasource": { "type": "postgres", "uid": "postgres" },
+            "fieldConfig": {
+                "defaults": {
+                    "color": { "mode": "thresholds" },
+                    "custom": {
+                        "align": "auto",
+                        "cellOptions": { "type": "auto" },
+                        "inspect": false
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [{ "color": "green", "value": null }]
+                    }
+                },
+                "overrides": [
+                    {
+                        "matcher": { "id": "byName", "options": "request_count" },
+                        "properties": [
+                            { "id": "custom.cellOptions", "value": { "type": "color-background" } },
+                            { "id": "color", "value": { "mode": "continuous-GrYlRd" } }
+                        ]
+                    }
+                ]
+            },
+            "gridPos": { "h": 8, "w": 6, "x": 6, "y": 20 },
+            "id": 11,
+            "options": {
+                "cellHeight": "sm",
+                "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
+                "showHeader": true,
+                "sortBy": [{ "desc": true, "displayName": "request_count" }]
+            },
+            "targets": [
+                {
+                    "datasource": { "type": "postgres", "uid": "postgres" },
+                    "format": "table",
+                    "rawSql": "SELECT client_ip as ip, COUNT(*) as request_count, MAX(timestamp) as last_seen FROM api_requests WHERE $__timeFilter(timestamp) GROUP BY client_ip ORDER BY request_count DESC LIMIT 20;",
+                    "refId": "A"
+                }
+            ],
+            "title": "Top IPs",
+            "type": "table"
+        },
+
+        {
+            "datasource": { "type": "postgres", "uid": "postgres" },
+            "fieldConfig": {
+                "defaults": {
+                    "color": { "mode": "thresholds" },
+                    "custom": {
+                        "align": "auto",
+                        "cellOptions": { "type": "auto" },
+                        "inspect": false
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [{ "color": "green", "value": null }]
+                    }
+                },
+                "overrides": [
+                    {
+                        "matcher": { "id": "byName", "options": "request_count" },
+                        "properties": [
+                            { "id": "custom.cellOptions", "value": { "type": "color-background" } },
+                            { "id": "color", "value": { "mode": "continuous-GrYlRd" } }
+                        ]
+                    }
+                ]
+            },
+            "gridPos": { "h": 8, "w": 6, "x": 12, "y": 20 },
+            "id": 12,
+            "options": {
+                "cellHeight": "sm",
+                "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
+                "showHeader": true,
+                "sortBy": [{ "desc": true, "displayName": "request_count" }]
+            },
+            "targets": [
+                {
+                    "datasource": { "type": "postgres", "uid": "postgres" },
+                    "format": "table",
+                    "rawSql": "SELECT user_agent, COUNT(*) as request_count FROM api_requests WHERE $__timeFilter(timestamp) GROUP BY user_agent ORDER BY request_count DESC LIMIT 20;",
+                    "refId": "A"
+                }
+            ],
+            "title": "Top Clients (User Agent)",
+            "type": "table"
         }
     ],
     "refresh": "5s",
     "schemaVersion": 38,
-    "tags": [
-        "analytics",
-        "real-time"
-    ],
-    "templating": {
-        "list": []
-    },
-    "time": {
-        "from": "now-24h",
-        "to": "now"
-    },
+    "tags": ["analytics", "real-time"],
+    "templating": { "list": [] },
+    "time": { "from": "now-24h", "to": "now" },
     "timepicker": {},
     "timezone": "browser",
     "title": "Pokemon Analytics - Real-time",

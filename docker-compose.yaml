@@ -9,7 +9,7 @@ x-wharfmap:
       border-width: "2px"
     classifier:
       color: "#FFF3E0"
-      border-color: "#E65100"
+      border-color: "#7b00e6"
       border-width: "2px"
   conditions:
     service_healthy:
@@ -23,10 +23,9 @@ services:
     image: postgres:15
     command: [ "postgres", "-c", "logging_collector=off", "-c", "log_statement=none", "-c", "log_min_messages=fatal" ]
     container_name: pkmn-db
-    environment:
-      POSTGRES_USER: pkmn
-      POSTGRES_PASSWORD: pkmn
-      POSTGRES_DB: pokedex
+    env_file:
+      - .env
+      - .env.postgres
     ports:
       - "5432:5432"
     volumes:
@@ -63,56 +62,13 @@ services:
       border-color: "#388E3C"
       border-width: "3px"
 
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.9.1
-    container_name: zookeeper
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-      ZOOKEEPER_SYNC_LIMIT: 2
-      ZOOKEEPER_MAX_CLIENT_CNXNS: 60
-      ZOOKEEPER_LOG4J_ROOT_LOGLEVEL: "ERROR"
-      ZOOKEEPER_LOG4J_LOGGERS: "org.apache.zookeeper=ERROR"
-    ports:
-      - "2181:2181"
-    profiles:
-      - classifier
-    healthcheck:
-      test: ["CMD-SHELL", "echo srvr | nc localhost 2181 | grep Zookeeper"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-    networks:
-      - web
-    x-wharfmap:
-      color: "#E1BEE7"
-      border-color: "#7B1FA2"
-      border-width: "3px"
-
   kafka:
     image: confluentinc/cp-kafka:7.9.1
     container_name: kafka
     restart: unless-stopped
-    depends_on:
-      zookeeper:
-        condition: service_healthy
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-      KAFKA_LOG_RETENTION_HOURS: 168
-      KAFKA_MESSAGE_MAX_BYTES: 10485760
-      KAFKA_REPLICA_FETCH_MAX_BYTES: 10485760
-      KAFKA_MAX_REQUEST_SIZE: 10485760
-      KAFKA_LOG4J_ROOT_LOGLEVEL: "WARN"
-      KAFKA_LOG4J_LOGGERS: "kafka.controller=ERROR,state.change.logger=ERROR"
-      KAFKA_LOG4J_OPTS: "-Dlog4j.configuration=file:/app/kafka-log4j.properties"
+    env_file:
+      - .env
+      - .env.kafka
     volumes:
       - ./custom-log4j.properties:/app/kafka-log4j.properties:ro
     ports:
@@ -137,55 +93,52 @@ services:
       border-color: "#E64A19"
       border-width: "3px"
 
-  redis:
-    image: redis:7-alpine
-    container_name: redis
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.9.1
+    container_name: schema-registry
+    restart: unless-stopped
     profiles:
       - classifier
-    ports:
-      - "6379:6379"
-    command: sh -c "echo 'Hello, Redis is starting!' && redis-server --appendonly yes --loglevel warning"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    env_file:
+      - .env
+      - .env.schema-registry
     volumes:
-      - redis_data:/data
+      - ./schema-registry-logging.properties:/etc/schema-registry/logging.properties:ro
+    ports:
+      - "8081:8081"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "curl", "-f", "http://localhost:8081/subjects"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 20s
     networks:
       - web
-    x-wharfmap:
-      color: "#FFCDD2"
-      border-color: "#C62828"
-      border-width: "3px"
+
 
   pkmn-api:
-    build: pkmn-api/.
+    build:
+      context: .
+      dockerfile: pkmn-api/Dockerfile
     container_name: pkmn-api
     restart: on-failure:3
     profiles:
       - classifier
-    environment:
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      KAFKA_INPUT_TOPIC: pokemon-images
-      KAFKA_OUTPUT_TOPIC: pokemon-results
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      DB_HOST: postgres
-      DB_NAME: pokedex
-      DB_USER: pkmn
-      DB_PASSWORD: pkmn
-      DB_PORT: 5432
+    env_file:
+      - .env
+      - .env.pkmn-api
     ports:
       - "8000:8000"
     volumes:
       - ./pkmn-api/src:/app/src
+      - ./schemas:/app/schemas:ro
     depends_on:
-      postgres:
-        condition: service_healthy
       kafka:
         condition: service_healthy
-      redis:
+      schema-registry:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -201,28 +154,81 @@ services:
       border-width: "3px"
 
   pkmn-classifier:
-    build: pkmn-classifier/.
+    build:
+      context: .
+      dockerfile: pkmn-classifier/Dockerfile
     container_name: pkmn-classifier
     restart: on-failure:3
     profiles:
       - classifier
-    environment:
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      KAFKA_INPUT_TOPIC: pokemon-images
-      KAFKA_OUTPUT_TOPIC: pokemon-results
-      KAFKA_CONSUMER_GROUP: pokemon-classifier-group
-      PYTHONUNBUFFERED: 1
+    env_file:
+      - .env
+      - .env.pkmn-classifier
     volumes:
       - ./pkmn-classifier/src:/app/src
       - ./pkmn-classifier/test:/app/test
+      - ./schemas:/app/schemas:ro
     depends_on:
       kafka:
+        condition: service_healthy
+      schema-registry:
         condition: service_healthy
     networks:
       - web
     x-wharfmap:
       color: "#C5CAE9"
       border-color: "#303F9F"
+      border-width: "3px"
+
+  pkmn-enhancement:
+    build:
+      context: .
+      dockerfile: pkmn-enhancement/Dockerfile
+    container_name: pkmn-enhancement
+    restart: on-failure:3
+    profiles:
+      - classifier
+    env_file:
+      - .env
+      - .env.pkmn-enhancement
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_healthy
+    volumes:
+      - ./schemas:/app/schemas:ro
+    networks:
+      - web
+
+  pkmn-metrics:
+    build:
+      context: .
+      dockerfile: pkmn-metrics/Dockerfile
+    container_name: pkmn-metrics
+    restart: on-failure:3
+    profiles:
+      - classifier
+    env_file:
+      - .env
+      - .env.pkmn-metrics
+    ports:
+      - "8082:8082"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_healthy
+    volumes:
+      - ./schemas:/app/schemas:ro
+      - ./pkmn-metrics/src:/app/src
+    networks:
+      - web
+    x-wharfmap:
+      color: "#D1C4E9"
+      border-color: "#6A1B9A"
       border-width: "3px"
 
   kafka-ui:
@@ -232,19 +238,13 @@ services:
       - classifier
     ports:
       - "8080:8080"
-    environment:
-      KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
-      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
-      LOG_LEVEL: OFF
-      LOGGING_LEVEL_ROOT: OFF
-      LOGGING_LEVEL_COM_PROVECTUS: OFF
-      LOGGING_LEVEL_REACTOR_CORE_PUBLISHER: OFF
-      AUTH_TYPE: "LOGIN_FORM"
-      SPRING_SECURITY_USER_NAME: ${KAFKA_UI_USER_NAME:-admin}
-      SPRING_SECURITY_USER_PASSWORD: ${KAFKA_UI_USER_PASSWORD:-admin123}
+    env_file:
+      - .env
+      - .env.kafka-ui
     depends_on:
       kafka:
+        condition: service_healthy
+      schema-registry:
         condition: service_healthy
     networks:
       - web 
@@ -313,13 +313,14 @@ services:
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
+    restart: unless-stopped
+    profiles:
+      - classifier
     ports:
       - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
-      - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_LOG_LEVEL=error
+    env_file:
+      - .env
+      - .env.grafana
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
@@ -358,6 +359,8 @@ services:
       - ./prometheus.yml:/prometheus/prometheus.yml:ro
     ports:
       - "9090:9090"
+    profiles:
+      - classifier
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
       interval: 30s
@@ -369,6 +372,8 @@ services:
     depends_on:
       node-exporter:
         condition: service_started
+      pkmn-metrics:
+        condition: service_started
     entrypoint: sh -c "echo 'Welcome to Prometheus!' && exec /bin/prometheus --config.file=/prometheus/prometheus.yml --log.level=error"
     x-wharfmap:
       color: "#F8BBD0"
@@ -377,7 +382,6 @@ services:
 
 volumes:
   pkmn_data:
-  redis_data:
   portainer_data:
   grafana_data:
 
