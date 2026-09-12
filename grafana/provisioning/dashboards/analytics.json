@@ -103,8 +103,8 @@
             "targets": [
                 {
                     "datasource": { "type": "postgres", "uid": "postgres" },
-                    "format": "table",
-                    "rawSql": "SELECT COUNT(DISTINCT pokemon_id) as value FROM pokemon_scans WHERE $__timeFilter(scanned_at);",
+                    "format": "time_series",
+                    "rawSql": "SELECT s1.scanned_at as time, (SELECT COUNT(DISTINCT pokemon_id) FROM pokemon_scans s2 WHERE s2.scanned_at <= s1.scanned_at AND $__timeFilter(s2.scanned_at)) as value FROM pokemon_scans s1 WHERE $__timeFilter(s1.scanned_at) ORDER BY time;",
                     "refId": "A"
                 }
             ],
@@ -132,14 +132,14 @@
                 "graphMode": "area",
                 "justifyMode": "auto",
                 "orientation": "auto",
-                "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+                "reduceOptions": { "values": false, "calcs": ["sum"], "fields": "" },
                 "textMode": "auto"
             },
             "targets": [
                 {
                     "datasource": { "type": "postgres", "uid": "postgres" },
-                    "format": "table",
-                    "rawSql": "SELECT COUNT(*) as value FROM api_requests WHERE $__timeFilter(timestamp);",
+                    "format": "time_series",
+                    "rawSql": "SELECT $__timeGroup(timestamp, $__interval) as time, COUNT(*) as value FROM api_requests WHERE $__timeFilter(timestamp) GROUP BY 1 ORDER BY 1;",
                     "refId": "A"
                 }
             ],
