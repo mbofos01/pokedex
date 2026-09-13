@@ -19,4 +19,4 @@ COPY pkmn-classifier/src/ ./src/
 COPY shared/ ./shared/
 
 # Default command to run your consumer
-CMD ["python", "src/classifier_worker.py"]
+CMD ["python", "src/main.py"]
