@@ -1,22 +1,25 @@
 x-wharfmap:
-  backgroundColor: "#e3c99d"
-  backgroundBorderColor: "#000000"
-  backgroundBorderWidth: 2
+  backgroundColor: "#EDE7F6"
+  backgroundBorderColor: "#4A3B78"
+  backgroundBorderWidth: 4
   profiles:
     setup:
-      color: "#E8F5E9"
-      border-color: "#2E7D32"
+      color: "#9A85C7"
+      border-color: "#5C4B8A"
       border-width: "2px"
     classifier:
-      color: "#FFF3E0"
-      border-color: "#7b00e6"
+      color: "#D1C4E9"
+      border-color: "#7E57C2"
       border-width: "2px"
   conditions:
     service_healthy:
-      # stroke: "#000000ff"
+      stroke: "#4A3B78"
       stroke-width: "2px"
       stroke-dasharray: "5 5"
       # color: "#000000ff"
+  networks:
+    web:
+      color: "#7B2FF7"
 
 services:
   postgres:
@@ -39,8 +42,8 @@ services:
     networks:
       - web
     x-wharfmap:
-      color: "#BBDEFB"
-      border-color: "#1976D2"
+      color: "#B4D4E7"
+      border-color: "#336791"
       border-width: "3px"
       border-style: "dashed"
 
@@ -58,8 +61,8 @@ services:
     networks:
       - web
     x-wharfmap:
-      color: "#C8E6C9"
-      border-color: "#388E3C"
+      color: "#FFCDD2"
+      border-color: "#EE1515"
       border-width: "3px"
 
   kafka:
@@ -89,8 +92,8 @@ services:
     networks:
       - web
     x-wharfmap:
-      color: "#FFCCBC"
-      border-color: "#E64A19"
+      color: "#D6D6D6"
+      border-color: "#000000"
       border-width: "3px"
 
   schema-registry:
@@ -149,8 +152,8 @@ services:
     networks:
       - web
     x-wharfmap:
-      color: "#FFE082"
-      border-color: "#F57C00"
+      color: "#FFCB05"
+      border-color: "#2A75BB"
       border-width: "3px"
 
   pkmn-classifier:
@@ -176,8 +179,8 @@ services:
     networks:
       - web
     x-wharfmap:
-      color: "#C5CAE9"
-      border-color: "#303F9F"
+      color: "#FCE4EC"
+      border-color: "#F85888"
       border-width: "3px"
 
   pkmn-enhancement:
@@ -227,8 +230,8 @@ services:
     networks:
       - web
     x-wharfmap:
-      color: "#D1C4E9"
-      border-color: "#6A1B9A"
+      color: "#E0E0F0"
+      border-color: "#6C7B8B"
       border-width: "3px"
 
   kafka-ui:
@@ -249,8 +252,8 @@ services:
     networks:
       - web 
     x-wharfmap:
-      color: "#E3F2FD"
-      border-color: "#1976D2"
+      color: "#B2DFDB"
+      border-color: "#00695C"
       border-width: "3px"
 
   nginx:
@@ -268,8 +271,8 @@ services:
     networks:
       - web
     x-wharfmap:
-      color: "#FFF9C4"
-      border-color: "#F57F17"
+      color: "#C8F7C5"
+      border-color: "#009639"
       border-width: "3px"
 
   ngrok:
@@ -288,8 +291,8 @@ services:
     networks:
       - web
     x-wharfmap:
-      color: "#D1C4E9"
-      border-color: "#512DA8"
+      color: "#D8F3E8"
+      border-color: "#1BA672"
       border-width: "3px"
 
   portainer:
@@ -306,8 +309,8 @@ services:
     networks:
       - web
     x-wharfmap:
-      color: "#E1F5FE"
-      border-color: "#0c4667ff"
+      color: "#B3ECFF"
+      border-color: "#13BEF9"
       border-width: "3px"
 
   grafana:
@@ -332,8 +335,8 @@ services:
       prometheus:
         condition: service_healthy
     x-wharfmap:
-      color: "#cc382b76"
-      border-color: "#E65100"
+      color: "#FFE0B2"
+      border-color: "#F46800"
       border-width: "3px"
 
   node-exporter:
@@ -348,8 +351,8 @@ services:
     volumes:
       - /:/host:ro
     x-wharfmap:
-      color: "#B2DFDB"
-      border-color: "#00897B"
+      color: "#CFD8DC"
+      border-color: "#607D8B"
       border-width: "3px"
 
   prometheus:
@@ -376,8 +379,8 @@ services:
         condition: service_started
     entrypoint: sh -c "echo 'Welcome to Prometheus!' && exec /bin/prometheus --config.file=/prometheus/prometheus.yml --log.level=error"
     x-wharfmap:
-      color: "#F8BBD0"
-      border-color: "#AD1457"
+      color: "#FFCCBC"
+      border-color: "#E6522C"
       border-width: "3px"
 
 volumes:
