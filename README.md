@@ -19,6 +19,13 @@ Point your phone camera at any Pokémon → instantly get identification with st
 |-------------|----------|---------|
 | ![Home Screen](docs/screenshots/home_page.jpg) | ![Scanning](docs/screenshots/scan.jpg) | ![Results](docs/screenshots/info_page.jpg) |
 
+## 🔢 Dashboards
+
+![Database Stats](docs/screenshots/db-data.png)
+![Live Analytics](docs/screenshots/live-analytics.png)
+![Container Info](docs/screenshots/container-analytics.png)
+
+
 ## 🏗️ Architecture
 
 A microservices-based system designed for scalability and maintainability.
@@ -28,7 +35,6 @@ A microservices-based system designed for scalability and maintainability.
 - **🧠 ML Classifier** – ViT (Vision Transformer) via Transformers & PyTorch
 - **🗄️ Database** – PostgreSQL
 - **⚡ Message Broker** – Kafka
-- **🔥 Cache** – Redis
 - **📊 Monitoring** – Kafka UI
 
 ## 📦 Components
@@ -38,9 +44,9 @@ A microservices-based system designed for scalability and maintainability.
 | Mobile App           | React Native + Expo        | –             | ✅     |
 | API Gateway          | FastAPI                    | 8000          | ✅     |
 | ML Classifier        | Transformers (ViT)         | –             | ✅     |
-| Message Broker       | Apache Kafka + Zookeeper   | 29092 / 2181  | ✅     |
+| Metrics Dispatcher   | Python                     | -             | ✅     |
+| Message Broker       | Apache Kafka               | 29092         | ✅     |
 | Database             | PostgreSQL                 | 5432          | ✅     |
-| Cache                | Redis (encrypted)          | 6379          | ✅     |
 | Reverse Proxy        | Nginx                      | 80            | ✅     |
 | Tunnel               | ngrok                      | –             | ✅     |
 | Monitoring           | Kafka UI                   | 8080          | ✅     |
@@ -75,22 +81,6 @@ A microservices-based system designed for scalability and maintainability.
 - **Python 3.x with cryptography library** (for key generation)
 - **ngrok account** (free tier works)
 
-### 0. Generate Encryption Key (First Time Only)
-
-Before starting the backend, you need to generate an encryption key:
-
-```bash
-# Install cryptography locally
-pip install cryptography
-
-# Generate encryption key
-cd pkmn-api/src
-python generate_key.py
-
-# This creates a .env file with ENCRYPTION_KEY
-```
-
-**Note:** The encryption key is used to encrypt data at rest in Redis. Without it, the API will fail to start.
 
 ### 1. Setup Database & Fetch Pokémon Data
 
@@ -120,10 +110,9 @@ docker-compose --profile classifier up
 
 # Services started:
 # ✓ PostgreSQL (5432)
-# ✓ Zookeeper (2181)
 # ✓ Kafka (29092) 
-# ✓ Redis (6379)
 # ✓ FastAPI (8000)
+# ✓ Dispatcher
 # ✓ ML Classifier
 # ✓ Kafka UI (8080)
 # ✓ Nginx (80)

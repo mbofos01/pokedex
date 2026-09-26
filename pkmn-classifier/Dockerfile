@@ -11,11 +11,12 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
     mv /root/.local/bin/uv /usr/local/bin/uv
 
 # Install dependencies
-COPY requirements.txt .
+COPY pkmn-classifier/requirements.txt .
 RUN uv pip install --system --no-cache -r requirements.txt
 
-# Copy source code
-COPY src/ ./src/
+# Copy source code and shared modules
+COPY pkmn-classifier/src/ ./src/
+COPY shared/ ./shared/
 
 # Default command to run your consumer
 CMD ["python", "src/main.py"]

@@ -1,0 +1,30 @@
+{
+  "type": "record",
+  "name": "PokemonResult",
+  "namespace": "com.pokedex.events",
+  "fields": [
+    {"name": "request_id", "type": "string"},
+    {"name": "filename", "type": "string"},
+    {"name": "prediction", "type": "string"},
+    {"name": "confidence", "type": "float"},
+    {"name": "classified_at", "type": "long", "default": 0},
+    {"name": "pokemon_details", "type": ["null", {
+      "type": "record",
+      "name": "PokemonDetails",
+      "fields": [
+        {"name": "id", "type": "int"},
+        {"name": "name", "type": "string"},
+        {"name": "height", "type": "int"},
+        {"name": "weight", "type": "int"},
+        {"name": "types", "type": {"type": "array", "items": "string"}},
+        {"name": "stats", "type": {"type": "map", "values": "int"}},
+        {"name": "abilities", "type": {"type": "array", "items": "string"}},
+        {"name": "base_experience", "type": "int"},
+        {"name": "official_artwork", "type": ["null", "string"], "default": null}
+      ]
+    }], "default": null},
+    {"name": "enriched_at", "type": "long", "default": 0},
+    {"name": "pipeline_duration_ms", "type": "int", "default": 0},
+    {"name": "schema_version", "type": "int", "default": 1}
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "type": "record",
+  "name": "PokemonImage",
+  "namespace": "com.pokedex.events",
+  "fields": [
+    {"name": "request_id", "type": "string"},
+    {"name": "endpoint", "type": "string"},
+    {"name": "timestamp", "type": "long"},
+    {"name": "client_ip", "type": "string"},
+    {"name": "user_agent", "type": "string"},
+    {"name": "forwarded_for", "type": "string"},
+    {"name": "filename", "type": "string"},
+    {"name": "image_bytes", "type": "bytes"},
+    {"name": "schema_version", "type": "int", "default": 1}
+  ]
+}

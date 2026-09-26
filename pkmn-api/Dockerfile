@@ -10,11 +10,14 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
     mv /root/.local/bin/uv /usr/local/bin/uv
 
 # Install dependencies
-COPY requirements.txt .
+COPY pkmn-api/requirements.txt .
 RUN uv pip install --system --no-cache -r requirements.txt
 
 # Expose port
 EXPOSE 8000
+
+# Copy shared modules
+COPY shared/ ./shared/
 
 # Run FastAPI
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]

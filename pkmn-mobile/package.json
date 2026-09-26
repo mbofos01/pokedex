@@ -9,18 +9,23 @@
     "web": "expo start --web"
   },
   "dependencies": {
-    "expo": "~54.0.25",
-    "expo-router": "^6.0.15",
-    "expo-status-bar": "~3.0.8",
-    "react": "19.1.0",
-    "react-native": "0.81.5",
-    "expo-image-picker": "^16.0.0",
-    "axios": "^1.6.0",
-    "expo-linear-gradient": "~14.0.2"
+    "axios": "^1.20.0",
+    "expo": "^57.0.22",
+    "expo-constants": "~57.0.18",
+    "expo-image-picker": "~57.0.17",
+    "expo-linear-gradient": "~57.0.2",
+    "expo-linking": "~57.0.10",
+    "expo-router": "~57.0.21",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "uuid": "^14.0.2"
   },
   "devDependencies": {
-    "@types/react": "~19.1.0",
-    "typescript": "~5.9.2"
+    "@expo/ngrok": "^4.1.0",
+    "@types/react": "~19.2.4",
+    "typescript": "~6.0.3"
   },
   "private": true
 }

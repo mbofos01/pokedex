@@ -1,92 +1,149 @@
-from kafka import KafkaConsumer, KafkaProducer
-from transformers import ViTForImageClassification, ViTImageProcessor
-from PIL import Image
-import torch
 import io
 import json
-import time
 import os
+import time
 
-# Kafka connection with retry
-bootstrap_servers = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092')
-input_topic = os.getenv('KAFKA_INPUT_TOPIC', 'pokemon-images')
-output_topic = os.getenv('KAFKA_OUTPUT_TOPIC', 'pokemon-results')
-consumer_group = os.getenv('KAFKA_CONSUMER_GROUP', 'pokemon-classifier-group')
-max_retries = 10
+import torch
+from confluent_kafka import KafkaError
+from confluent_kafka.error import ConsumeError
 
-print(f"Connecting to Kafka at {bootstrap_servers}...")
-print(f"Input topic: {input_topic}")
-print(f"Output topic: {output_topic}")
+from shared.logging import get_logger
+from confluent_kafka.schema_registry import SchemaRegistryClient
+from confluent_kafka.schema_registry.avro import AvroDeserializer, AvroSerializer
+from confluent_kafka.serialization import StringDeserializer, StringSerializer
+from confluent_kafka import DeserializingConsumer, SerializingProducer
+from PIL import Image
+from transformers import ViTForImageClassification, ViTImageProcessor
 
-for attempt in range(max_retries):
-    try:
-        consumer = KafkaConsumer(
-            input_topic,
-            bootstrap_servers=bootstrap_servers,
-            value_deserializer=lambda m: json.loads(m.decode('utf-8')),
-            auto_offset_reset='earliest',
-            enable_auto_commit=True,
-            group_id=consumer_group
-        )
-        
-        producer = KafkaProducer(
-            bootstrap_servers=bootstrap_servers,
-            value_serializer=lambda v: json.dumps(v).encode('utf-8')
-        )
-        print("✓ Connected to Kafka successfully!")
-        break
-    except Exception as e:
-        print(f"Attempt {attempt + 1}/{max_retries} failed: {e}")
-        if attempt < max_retries - 1:
-            time.sleep(5)
-        else:
-            raise
 
-print("Loading model...")
-device = "cuda" if torch.cuda.is_available() else "cpu"
-model_id = "skshmjn/Pokemon-classifier-gen9-1025"
-model = ViTForImageClassification.from_pretrained(model_id).to(device)
-processor = ViTImageProcessor.from_pretrained(model_id)
-model.eval()
-print(f"✓ Model loaded on {device}")
+BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS")
+TO_BE_CLASSIFIED_TOPIC = os.getenv("KAFKA_INPUT_TOPIC")
+TO_BE_ENHANCED_TOPIC = os.getenv("KAFKA_OUTPUT_TOPIC")
+GROUP_ID = os.getenv("KAFKA_CONSUMER_GROUP")
+CONFIDENCE_THRESHOLD = 0.5
 
-# Confidence threshold
-CONFIDENCE_THRESHOLD = 0.5  # Adjust this value (0.0 to 1.0)
 
-print("Waiting for messages...")
-for message in consumer:
-    try:
-        data = message.value
-        request_id = data.get('request_id')
-        img_bytes = bytes.fromhex(data['image_bytes'])
-        img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+def identity(value, _context):
+    return value
 
-        # Prediction
-        inputs = processor(images=img, return_tensors="pt").to(device)
-        outputs = model(**inputs)
-        
-        # Get probabilities
-        probabilities = torch.nn.functional.softmax(outputs.logits, dim=-1)
-        confidence, pred_id = torch.max(probabilities, dim=-1)
-        confidence = confidence.item()
-        pred_id = pred_id.item()
-        
-        # Check confidence threshold
-        if confidence < CONFIDENCE_THRESHOLD:
-            pred_label = "Unknown"
-            print(f"Low confidence ({confidence:.2%}): {data['filename']} -> Unknown")
-        else:
-            pred_label = model.config.id2label[pred_id]
-            print(f"Classified ({confidence:.2%}): {data['filename']} -> {pred_label}")
 
-        # Send result back with request_id and confidence
-        result = {
-            'request_id': request_id,
-            'filename': data['filename'],
-            'prediction': pred_label,
-            'confidence': round(confidence, 4)
+def main():
+    schema_registry = SchemaRegistryClient(
+        {"url": os.getenv("SCHEMA_REGISTRY_URL", "http://schema-registry:8081")}
+    )
+    with open("/app/schemas/pokemon-image.avsc", encoding="utf-8") as schema_file:
+        image_schema = schema_file.read()
+    with open("/app/schemas/pokemon-result.avsc", encoding="utf-8") as schema_file:
+        result_schema = schema_file.read()
+    consumer = DeserializingConsumer(
+        {
+            "bootstrap.servers": BOOTSTRAP_SERVERS,
+            "key.deserializer": StringDeserializer("utf_8"),
+            "value.deserializer": AvroDeserializer(
+                schema_registry, image_schema, identity
+            ),
+            "group.id": GROUP_ID,
+            "auto.offset.reset": "earliest",
+            "enable.auto.commit": False,
+            # topic may not exist yet if pkmn-api hasn't produced to it; let the
+            # broker (KAFKA_AUTO_CREATE_TOPICS_ENABLE) create it on first metadata request
+            "allow.auto.create.topics": True,
         }
-        producer.send(output_topic, result)
-        producer.flush()
-    except Exception as e:
-        print(f"Error processing message: {e}")
+    )
+    producer = SerializingProducer(
+        {
+            "bootstrap.servers": BOOTSTRAP_SERVERS,
+            "key.serializer": StringSerializer("utf_8"),
+            "value.serializer": AvroSerializer(
+                schema_registry, result_schema, identity
+            ),
+            "acks": "all",
+            "enable.idempotence": True,
+            "retries": 10,
+            "retry.backoff.ms": 500,
+        }
+    )
+    consumer.subscribe([TO_BE_CLASSIFIED_TOPIC])
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model = ViTForImageClassification.from_pretrained(
+        "skshmjn/Pokemon-classifier-gen9-1025"
+    ).to(device)
+    processor = ViTImageProcessor.from_pretrained(
+        "skshmjn/Pokemon-classifier-gen9-1025"
+    )
+    model.eval()
+    logger = get_logger("pokemon-classifier")
+    logger.info(
+        f"Classifier consuming {TO_BE_CLASSIFIED_TOPIC}; model running on {device}"
+    )
+
+    try:
+        while True:
+            try:
+                message = consumer.poll(1.0)
+            except ConsumeError as error:
+                # topic not created yet (e.g. pkmn-api hasn't produced its first message) or
+                # broker briefly unreachable; back off and retry instead of crashing the loop
+                if error.args[0].code() == KafkaError.UNKNOWN_TOPIC_OR_PART:
+                    logger.warning(
+                        f"Topic {TO_BE_CLASSIFIED_TOPIC} not available yet, retrying..."
+                    )
+                else:
+                    logger.error(f"Kafka consume error: {error}")
+                time.sleep(1.0)
+                continue
+            if message is None:
+                continue
+            if message.error():
+                if message.error().code() == KafkaError._PARTITION_EOF:
+                    continue
+                logger.error(f"Kafka consumer error: {message.error()}")
+                continue
+
+            try:
+                data = message.value()
+                request_id = data["request_id"]
+                filename = data.get("filename", "upload.jpg")
+                logger.info(
+                    f"Received image to classify: request_id={request_id}, filename={filename} - Listening to {TO_BE_CLASSIFIED_TOPIC}"
+                )
+                image = Image.open(io.BytesIO(data["image_bytes"])).convert("RGB")
+                inputs = processor(images=image, return_tensors="pt").to(device)
+                with torch.no_grad():
+                    probabilities = torch.nn.functional.softmax(
+                        model(**inputs).logits, dim=-1
+                    )
+                confidence, prediction_id = torch.max(probabilities, dim=-1)
+                confidence = confidence.item()
+                prediction = (
+                    "Unknown"
+                    if confidence < CONFIDENCE_THRESHOLD
+                    else model.config.id2label[prediction_id.item()]
+                )
+                result = {
+                    "request_id": request_id,
+                    "filename": data.get("filename", "upload.jpg"),
+                    "prediction": prediction,
+                    "confidence": round(confidence, 4),
+                    "classified_at": int(time.time() * 1000),
+                    "schema_version": 1,
+                }
+                producer.produce(
+                    TO_BE_ENHANCED_TOPIC,
+                    key=request_id,
+                    value=result,
+                )
+                producer.flush(10)
+                consumer.commit(message=message, asynchronous=False)
+                logger.info(
+                    f"Sent classification result: request_id={request_id}, prediction={prediction}, confidence={confidence:.4f} - Sent to {TO_BE_ENHANCED_TOPIC}"
+                )
+            except Exception as error:
+                logger.error(f"Failed to process message: {error}")
+    finally:
+        consumer.close()
+
+
+if __name__ == "__main__":
+    main()

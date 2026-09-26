@@ -1,36 +1,84 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
-from kafka import KafkaProducer, KafkaConsumer
-import json
-import uuid
-import os
-from typing import Dict
-from threading import Thread
-import redis
-from PIL import Image
+import asyncio
 import io
-import psycopg2
-from psycopg2.extras import RealDictCursor
-from cryptography.fernet import Fernet
-import base64
-from dotenv import load_dotenv
+import os
+import threading
+import time
+import uuid
 
-# Import analytics logging functions (use relative import)
-from .analytics import log_pokemon_scan, log_api_request
+from confluent_kafka import KafkaError
+from confluent_kafka.error import ConsumeError
+from confluent_kafka import DeserializingConsumer, SerializingProducer
+from confluent_kafka.schema_registry import SchemaRegistryClient
+from confluent_kafka.schema_registry.avro import AvroDeserializer, AvroSerializer
+from confluent_kafka.serialization import StringDeserializer, StringSerializer
+
+from fastapi import FastAPI, File, Header, Request, UploadFile, WebSocket
+from fastapi import WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+
+from PIL import Image
+
+from shared.logging import get_logger
+
+
+# ============================================================
+# Configuration
+# ============================================================
+
+MAX_IMAGE_DIMENSION = 800
+
+KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS")
+IMAGE_TOPIC = os.getenv("KAFKA_INPUT_TOPIC")
+RESULT_TOPIC = os.getenv("KAFKA_RESULT_TOPIC")
+SCHEMA_REGISTRY_URL = os.getenv("SCHEMA_REGISTRY_URL")
+
+
+# ============================================================
+# Logging
+# ============================================================
+
+logger = get_logger("pokemon-api")
+
+
+# ============================================================
+# Helpers
+# ============================================================
+
+
+def identity(value, _context):
+    return value
+
+
+# ============================================================
+# Load schemas
+# ============================================================
+
+with open(
+    "/app/schemas/pokemon-image.avsc",
+    encoding="utf-8",
+) as schema_file:
+    IMAGE_SCHEMA = schema_file.read()
+
+
+with open(
+    "/app/schemas/pokemon-enriched.avsc",
+    encoding="utf-8",
+) as schema_file:
+    RESULT_SCHEMA = schema_file.read()
+
+
+# ============================================================
+# FastAPI
+# ============================================================
 
 app = FastAPI(
-    title="Pokemon Classifier API",
+    title="Pokemon Classifier Gateway",
     docs_url="/swagger",
     redoc_url="/docs",
     openapi_url="/openapi.json",
-    root_path="/pkmn-api"   # Important for reverse proxy
+    root_path="/pkmn-api",
 )
 
-# Load .env file from same directory
-load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
-
-# Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -39,349 +87,549 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Kafka configuration
-KAFKA_BOOTSTRAP_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'kafka:9092')
-KAFKA_INPUT_TOPIC = os.getenv('KAFKA_INPUT_TOPIC', 'pokemon-images')
-KAFKA_OUTPUT_TOPIC = os.getenv('KAFKA_OUTPUT_TOPIC', 'pokemon-results')
 
-# Redis configuration
-REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
-REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
+# ============================================================
+# Schema Registry
+# ============================================================
 
-# Database configuration
-DB_HOST = os.getenv('DB_HOST', 'postgres')
-DB_NAME = os.getenv('DB_NAME', 'pokedex')
-DB_USER = os.getenv('DB_USER', 'pkmn')
-DB_PASSWORD = os.getenv('DB_PASSWORD', 'pkmn')
-DB_PORT = os.getenv('DB_PORT', '5432')
-
-# Encryption configuration
-ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY')
-if not ENCRYPTION_KEY:
-    print("\n" + "="*60)
-    print("❌ ERROR: ENCRYPTION_KEY not found!")
-    print("="*60)
-    print("\nPlease generate an encryption key by running:")
-    print("\n  python src/generate_key.py")
-    print("\nOr set ENCRYPTION_KEY in your .env file")
-    print("="*60 + "\n")
-    import sys
-    sys.exit(1)  # Graceful exit instead of exception
-
-fernet = Fernet(ENCRYPTION_KEY.encode())
-
-# Initialize Redis client
-redis_client = redis.Redis(
-    host=REDIS_HOST,
-    port=REDIS_PORT,
-    decode_responses=True
+schema_registry = SchemaRegistryClient(
+    {
+        "url": SCHEMA_REGISTRY_URL,
+    }
 )
 
-# Initialize Kafka producer with larger message size
-producer = KafkaProducer(
-    bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
-    value_serializer=lambda v: json.dumps(v).encode('utf-8'),
-    max_request_size=10485760  # 10MB max message size
+
+# ============================================================
+# Kafka Producer
+# ============================================================
+
+producer = SerializingProducer(
+    {
+        "bootstrap.servers": KAFKA_BOOTSTRAP_SERVERS,
+        "key.serializer": StringSerializer("utf_8"),
+        "value.serializer": AvroSerializer(
+            schema_registry,
+            IMAGE_SCHEMA,
+            identity,
+        ),
+        "acks": "all",
+        "enable.idempotence": True,
+        "retries": 10,
+        "retry.backoff.ms": 500,
+    }
 )
 
-def get_pokemon_details(pokemon_name: str):
-    """Fetch Pokemon details from database"""
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT
-        )
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        
-        # Get basic info
-        cur.execute("""
-            SELECT id, name, height, weight, base_experience
-            FROM pokemon
-            WHERE LOWER(
-                    REGEXP_REPLACE(
-                        REPLACE(REPLACE(REPLACE(name, '♂', 'm'), '♀', 'f'), '''', ''),
-                        E'[^a-z0-9]', '', 'g'
-                    )
-                ) = LOWER(
-                    REGEXP_REPLACE(
-                        REPLACE(REPLACE(REPLACE(LOWER(%s), '♂', 'm'), '♀', 'f'), '''', ''),
-                        E'[^a-z0-9]', '', 'g'
-                    )
-                )
-        """, (pokemon_name,))
-        pokemon = cur.fetchone()
-        
-        if not pokemon:
-            return None
-        
-        pokemon_id = pokemon['id']
-        
-        # Get types
-        cur.execute("""
-            SELECT type_name FROM types WHERE pokemon_id = %s
-        """, (pokemon_id,))
-        types = [row['type_name'] for row in cur.fetchall()]
-        
-        # Get stats
-        cur.execute("""
-            SELECT stat_name, base_stat FROM stats WHERE pokemon_id = %s
-        """, (pokemon_id,))
-        stats = {row['stat_name']: row['base_stat'] for row in cur.fetchall()}
-        
-        # Get abilities
-        cur.execute("""
-            SELECT ability_name, is_hidden FROM abilities WHERE pokemon_id = %s
-        """, (pokemon_id,))
-        abilities = [row['ability_name'] for row in cur.fetchall() if not row['is_hidden']]
-        
-        # Get official artwork image
-        cur.execute("""
-            SELECT url FROM images 
-            WHERE pokemon_id = %s 
-            AND image_type = 'other_official-artwork'
-            LIMIT 1
-        """, (pokemon_id,))
-        image_row = cur.fetchone()
-        official_artwork = image_row['url'] if image_row else None
-        
-        cur.close()
-        conn.close()
-        
-        return {
-            'id': pokemon['id'],
-            'name': pokemon['name'],
-            'height': pokemon['height'],
-            'weight': pokemon['weight'],
-            'types': types,
-            'stats': stats,
-            'abilities': abilities,
-            'base_experience': pokemon['base_experience'],
-            'official_artwork': official_artwork
-        }
-        
-    except Exception as e:
-        print(f"Database error: {e}")
-        return None
 
-def encrypt_data(data: str) -> str:
-    """Encrypt data before storing in Redis"""
-    return fernet.encrypt(data.encode()).decode()
+# ============================================================
+# Application state
+# ============================================================
 
-def decrypt_data(encrypted_data: str) -> str:
-    """Decrypt data from Redis"""
-    return fernet.decrypt(encrypted_data.encode()).decode()
+running = True
 
-# Background consumer for results
-def consume_results():
-    """Background thread to consume classification results from Kafka"""
-    consumer = KafkaConsumer(
-        KAFKA_OUTPUT_TOPIC,
-        bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
-        value_deserializer=lambda m: json.loads(m.decode('utf-8')),
-        auto_offset_reset='latest',
-        group_id='api-result-consumer'
-    )
-    
-    print(f"✓ Started consuming from {KAFKA_OUTPUT_TOPIC}")
-    
-    for message in consumer:
-        data = message.value
-        request_id = data.get('request_id')
-        if request_id:
-            # Fetch Pokemon details from database
-            pokemon_name = data.get('prediction')
-            pokemon_details = None
-            
-            if pokemon_name and pokemon_name != 'Unknown':
-                pokemon_details = get_pokemon_details(pokemon_name)
-            
-            # Store result with Pokemon details in Redis (encrypted)
-            result_data = {
-                **data,
-                'pokemon_details': pokemon_details
-            }
-            
-            encrypted_result = encrypt_data(json.dumps(result_data))
-            redis_client.setex(
-                f"result:{request_id}",
-                3600,
-                encrypted_result
+
+# ============================================================
+# WebSocket Connection Manager
+# ============================================================
+
+
+class ConnectionManager:
+    """
+    Keeps track of WebSocket connections by request_id.
+
+    Example:
+
+        request_id = "abc-123"
+
+        connections["abc-123"] = websocket
+    """
+
+    def __init__(self):
+        self.connections: dict[str, WebSocket] = {}
+        self.lock = threading.Lock()
+
+    async def connect(
+        self,
+        request_id: str,
+        websocket: WebSocket,
+    ):
+        await websocket.accept()
+
+        with self.lock:
+            self.connections[request_id] = websocket
+
+        logger.info(f"WebSocket connected: request_id={request_id}")
+
+    def disconnect(self, request_id: str):
+        with self.lock:
+            self.connections.pop(request_id, None)
+
+        logger.info(f"WebSocket disconnected: request_id={request_id}")
+
+    def get(self, request_id: str):
+        with self.lock:
+            return self.connections.get(request_id)
+
+    async def send_result(
+        self,
+        request_id: str,
+        result: dict,
+    ) -> bool:
+
+        websocket = self.get(request_id)
+
+        if websocket is None:
+            logger.warning(f"No WebSocket connection found for request_id={request_id}")
+            return False
+
+        try:
+            await websocket.send_json(
+                {
+                    "type": "classification-complete",
+                    **result,
+                }
             )
-            print(f"✓ Received result for request_id: {request_id}")
-            
-            confidence = data.get('confidence')
-            # Log scan to analytics if prediction is valid
-            if pokemon_name and pokemon_name != 'Unknown' and pokemon_details:
-                log_pokemon_scan(
-                    pokemon_id=pokemon_details['id'],
-                    pokemon_name=pokemon_name,
-                    confidence_score=confidence,
-                    user_id=data.get('user_id', None),
-                    source="api"
-                )
-            elif pokemon_name and pokemon_name == 'Unknown':
-                log_pokemon_scan(
-                    pokemon_id=-1,
-                    pokemon_name='Unknown',
-                    confidence_score=confidence,
-                    user_id=data.get('user_id', None),
-                    source="api"
+
+            logger.info(
+                f"Classification result sent over WebSocket: request_id={request_id}"
+            )
+
+            return True
+
+        except Exception as error:
+            logger.error(
+                f"Failed to send WebSocket result: "
+                f"request_id={request_id}, "
+                f"error={error}"
+            )
+
+            self.disconnect(request_id)
+
+            return False
+
+
+manager = ConnectionManager()
+
+
+# ============================================================
+# Kafka delivery callback
+# ============================================================
+
+
+def delivery_report(error, message):
+    if error is not None:
+        logger.error(f"Kafka delivery failed for key={message.key()}: {error}")
+    else:
+        logger.info(
+            f"Kafka message delivered: "
+            f"topic={message.topic()}, "
+            f"partition={message.partition()}, "
+            f"offset={message.offset()}, "
+            f"key={message.key()}"
+        )
+
+
+# ============================================================
+# Kafka Result Consumer
+# ============================================================
+
+
+def consume_results(loop: asyncio.AbstractEventLoop):
+    """
+    Runs in a background thread.
+
+    Consumes enriched Pokemon classification results from Kafka
+    and forwards them to the appropriate WebSocket based on
+    request_id.
+    """
+
+    consumer = DeserializingConsumer(
+        {
+            "bootstrap.servers": KAFKA_BOOTSTRAP_SERVERS,
+            "key.deserializer": StringDeserializer("utf_8"),
+            "value.deserializer": AvroDeserializer(
+                schema_registry,
+                RESULT_SCHEMA,
+                identity,
+            ),
+            "group.id": "pokedex-gateway",
+            "auto.offset.reset": "earliest",
+            "enable.auto.commit": False,
+            "allow.auto.create.topics": True,
+        }
+    )
+
+    consumer.subscribe([RESULT_TOPIC])
+
+    logger.info(f"Gateway consuming results from Kafka topic: {RESULT_TOPIC}")
+
+    try:
+        while running:
+            try:
+                message = consumer.poll(1.0)
+
+            except ConsumeError as error:
+                logger.warning(f"Kafka topic not ready, retrying: {error}")
+
+                time.sleep(1.0)
+                continue
+
+            if message is None:
+                continue
+
+            if message.error():
+                if message.error().code() != KafkaError._PARTITION_EOF:
+                    logger.error(f"Kafka consumer error: {message.error()}")
+
+                continue
+
+            result = message.value()
+
+            if not result:
+                logger.warning("Received empty Kafka result")
+                continue
+
+            request_id = result.get("request_id")
+
+            prediction = result.get("prediction")
+
+            confidence = result.get("confidence")
+
+            logger.info(
+                f"Received enriched result: "
+                f"request_id={request_id}, "
+                f"prediction={prediction}, "
+                f"confidence={confidence}"
+            )
+
+            if not request_id:
+                logger.error("Kafka result has no request_id")
+
+                consumer.commit(
+                    message=message,
+                    asynchronous=False,
                 )
 
-# Start consumer thread on startup
+                continue
+
+            # ------------------------------------------------
+            # Send Kafka result to WebSocket.
+            #
+            # Kafka consumer runs in another thread, so we
+            # schedule the coroutine on FastAPI's event loop.
+            # ------------------------------------------------
+
+            future = asyncio.run_coroutine_threadsafe(
+                manager.send_result(
+                    request_id,
+                    result,
+                ),
+                loop,
+            )
+
+            try:
+                delivered = future.result(timeout=10)
+
+                if delivered:
+                    logger.info(
+                        f"Successfully delivered result: request_id={request_id}"
+                    )
+                else:
+                    logger.warning(
+                        f"Could not deliver result because "
+                        f"WebSocket was not connected: "
+                        f"request_id={request_id}"
+                    )
+
+            except Exception as error:
+                logger.error(
+                    f"Error delivering WebSocket result: "
+                    f"request_id={request_id}, "
+                    f"error={error}"
+                )
+
+            # ------------------------------------------------
+            # Commit only after we've attempted delivery.
+            # ------------------------------------------------
+
+            consumer.commit(
+                message=message,
+                asynchronous=False,
+            )
+
+    finally:
+        consumer.close()
+
+        logger.info("Kafka result consumer stopped")
+
+
+# ============================================================
+# Startup
+# ============================================================
+
+
 @app.on_event("startup")
 async def startup_event():
-    """Start background consumer thread"""
-    consumer_thread = Thread(target=consume_results, daemon=True)
-    consumer_thread.start()
-    print("✓ API started, consumer thread running")
 
-@app.get("/", include_in_schema=False)
-async def root():
-    # Use root_path dynamically so redirect works behind proxy
-    return RedirectResponse(url=app.root_path + "/swagger")
+    global running
+
+    running = True
+
+    loop = asyncio.get_running_loop()
+
+    thread = threading.Thread(
+        target=consume_results,
+        args=(loop,),
+        daemon=True,
+        name="pokemon-result-consumer",
+    )
+
+    thread.start()
+
+    logger.info("Pokemon API started")
+
+    logger.info(f"Kafka bootstrap servers: {KAFKA_BOOTSTRAP_SERVERS}")
+
+    logger.info(f"Image topic: {IMAGE_TOPIC}")
+
+    logger.info(f"Result topic: {RESULT_TOPIC}")
+
+
+# ============================================================
+# WebSocket endpoint
+# ============================================================
+
+
+@app.websocket("/ws/{request_id}")
+async def websocket_endpoint(
+    websocket: WebSocket,
+    request_id: str,
+):
+    """
+    React Native connects here before uploading the image.
+
+    Example:
+
+        wss://your-ngrok-url/pkmn-api/ws/abc123
+    """
+
+    await manager.connect(
+        request_id,
+        websocket,
+    )
+
+    try:
+        while True:
+            # ------------------------------------------------
+            # We don't actually need messages from the client.
+            #
+            # receive_text() simply keeps the connection alive
+            # and allows FastAPI to detect a disconnected client.
+            # ------------------------------------------------
+
+            await websocket.receive_text()
+
+    except WebSocketDisconnect:
+        manager.disconnect(request_id)
+
+    except Exception as error:
+        logger.error(f"WebSocket error: request_id={request_id}, error={error}")
+
+        manager.disconnect(request_id)
+
+
+# ============================================================
+# Health check
+# ============================================================
+
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
-    try:
-        redis_client.ping()
-        return {"status": "healthy", "redis": "connected"}
-    except:
-        return {"status": "degraded", "redis": "disconnected"}
+    return {
+        "status": "healthy",
+        "kafka": KAFKA_BOOTSTRAP_SERVERS,
+        "image_topic": IMAGE_TOPIC,
+        "result_topic": RESULT_TOPIC,
+    }
+
+
+# ============================================================
+# Image classification endpoint
+# ============================================================
+
 
 @app.post("/classify-pokemon/")
-async def classify_pokemon(file: UploadFile = File(...)):
-    """
-    Upload a Pokemon image for classification
-    
-    Returns request_id to track the classification result
-    """
-    try:
-        # Generate unique request ID
-        request_id = str(uuid.uuid4())
-        
-        # Read image bytes
-        contents = await file.read()
-        
-        # Log file details
-        print(f"Received file: {file.filename}, size: {len(contents)} bytes, type: {file.content_type}")
-        
-        # Validate it's an image
-        if len(contents) == 0:
-            raise HTTPException(status_code=400, detail="Empty file received")
-        
-        # Resize/compress image if too large
-        img = Image.open(io.BytesIO(contents))
-        
-        # Resize if larger than 800x800
-        max_size = 800
-        if img.width > max_size or img.height > max_size:
-            img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
-            print(f"Resized image to: {img.size}")
-        
-        # Convert to JPEG with quality 85
-        img_byte_arr = io.BytesIO()
-        if img.mode != 'RGB':
-            img = img.convert('RGB')
-        img.save(img_byte_arr, format='JPEG', quality=85)
-        compressed_bytes = img_byte_arr.getvalue()
-        
-        print(f"Compressed size: {len(compressed_bytes)} bytes (from {len(contents)})")
-        
-        # Convert to hex string
-        hex_string = compressed_bytes.hex()
-        
-        # Create Kafka message
-        message = {
-            'request_id': request_id,
-            'filename': file.filename,
-            'image_bytes': hex_string
-        }
-        
-        # Send to Kafka
-        print(f"Sending to Kafka: request_id={request_id}, hex_size={len(hex_string)}")
-        future = producer.send(KAFKA_INPUT_TOPIC, message)
-        future.get(timeout=10)  # Wait for confirmation
+async def classify_pokemon(
+    request: Request,
+    file: UploadFile = File(...),
+    x_request_id: str | None = Header(default=None),
+):
 
-        # Log API request to analytics
-        log_api_request(
-            endpoint="/classify-pokemon/",
-            method="POST",
-            status_code=200,
-            response_time_ms=0,  # You can measure actual time if needed
-            user_agent=None,
-            ip_address=None
-        )
+    # --------------------------------------------------------
+    # Request metadata
+    # --------------------------------------------------------
+
+    client_ip = request.client.host if request.client else "unknown"
+
+    user_agent = request.headers.get(
+        "user-agent",
+        "unknown",
+    )
+
+    forwarded_for = request.headers.get(
+        "x-forwarded-for",
+        "unknown",
+    )
+
+    request_id = x_request_id or str(uuid.uuid4())
+
+    logger.info(
+        f"Received classification request: "
+        f"request_id={request_id}, "
+        f"filename={file.filename}"
+    )
+
+    # --------------------------------------------------------
+    # Read image
+    # --------------------------------------------------------
+
+    contents = await file.read()
+
+    if not contents:
+        logger.warning(f"Empty image upload: request_id={request_id}")
 
         return {
-            "status": "processing",
+            "status": "error",
             "request_id": request_id,
-            "filename": file.filename,
-            "message": "Image sent for classification. Use /result/{request_id} to get the prediction."
+            "message": "Empty file",
         }
-    except Exception as e:
-        import traceback
-        error_details = traceback.format_exc()
-        print(f"Error processing image: {e}")
-        print(f"Traceback: {error_details}")
-        raise HTTPException(status_code=500, detail=f"Failed to process image: {str(e)}")
 
-@app.get("/result/{request_id}")
-async def get_result(request_id: str):
-    """
-    Get classification result by request_id
-    
-    Poll this endpoint to check if classification is complete
-    """
-    result_key = f"result:{request_id}"
-    encrypted_result = redis_client.get(result_key)
-    
-    if encrypted_result:
-        # Decrypt and parse result
-        result_json = decrypt_data(encrypted_result)
-        result = json.loads(result_json)
-        redis_client.delete(result_key)  # Remove after retrieval
-        
-        response = {
-            "status": "completed",
+    # --------------------------------------------------------
+    # Open image
+    # --------------------------------------------------------
+
+    try:
+        image = Image.open(io.BytesIO(contents))
+
+        image.load()
+
+    except Exception as error:
+        logger.error(f"Invalid image: request_id={request_id}, error={error}")
+
+        return {
+            "status": "error",
             "request_id": request_id,
-            "prediction": result.get('prediction'),
-            "confidence": result.get('confidence')
-            # "filename": result.get('filename')
+            "message": "Invalid image file",
         }
-        
-        # Add Pokemon details if available
-        if result.get('pokemon_details'):
-            details = result['pokemon_details']
-            response['pokemon_details'] = {
-                'id': details['id'],
-                'name': details['name'],
-                'height': details['height'],
-                'weight': details['weight'],
-                'types': details['types'],
-                'abilities': details['abilities'],
-                'base_experience': details['base_experience'],
-                'stats': details['stats'],
-                'official_artwork': details.get('official_artwork')
-            }
-        
-        return response
-    
+
+    # --------------------------------------------------------
+    # Resize large images
+    # --------------------------------------------------------
+
+    if image.width > MAX_IMAGE_DIMENSION or image.height > MAX_IMAGE_DIMENSION:
+        image.thumbnail(
+            (
+                MAX_IMAGE_DIMENSION,
+                MAX_IMAGE_DIMENSION,
+            ),
+            Image.Resampling.LANCZOS,
+        )
+
+    # --------------------------------------------------------
+    # Convert to RGB
+    # --------------------------------------------------------
+
+    if image.mode != "RGB":
+        image = image.convert("RGB")
+
+    # --------------------------------------------------------
+    # Compress to JPEG
+    # --------------------------------------------------------
+
+    compressed = io.BytesIO()
+
+    image.save(
+        compressed,
+        format="JPEG",
+        quality=85,
+        optimize=True,
+    )
+
+    contents = compressed.getvalue()
+
+    # --------------------------------------------------------
+    # Kafka event
+    # --------------------------------------------------------
+
+    event = {
+        "request_id": request_id,
+        "endpoint": "/classify-pokemon/",
+        "timestamp": int(time.time() * 1000),
+        "client_ip": client_ip,
+        "user_agent": user_agent,
+        "forwarded_for": forwarded_for,
+        "filename": file.filename or "upload.jpg",
+        "image_bytes": contents,
+        "schema_version": 1,
+    }
+
+    # --------------------------------------------------------
+    # Produce Kafka message
+    # --------------------------------------------------------
+
+    try:
+        producer.produce(
+            IMAGE_TOPIC,
+            key=request_id,
+            value=event,
+            on_delivery=delivery_report,
+        )
+
+        # Give confluent-kafka a chance to process callbacks.
+        producer.poll(0)
+
+        # Wait for delivery.
+        producer.flush(10)
+
+    except Exception as error:
+        logger.error(f"Kafka produce failed: request_id={request_id}, error={error}")
+
+        return {
+            "status": "error",
+            "request_id": request_id,
+            "message": "Failed to send image for processing",
+        }
+
+    logger.info(f"Produced image event: request_id={request_id}, topic={IMAGE_TOPIC}")
+
+    # --------------------------------------------------------
+    # Return immediately.
+    #
+    # The actual result comes through WebSocket.
+    # --------------------------------------------------------
+
     return {
         "status": "processing",
         "request_id": request_id,
-        "message": "Classification in progress or request_id not found"
     }
+
+
+# ============================================================
+# Shutdown
+# ============================================================
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """Close Kafka producer on shutdown"""
-    producer.close()
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    global running
+
+    running = False
+
+    logger.info("Shutting down Pokemon API...")
+
+    try:
+        producer.flush(10)
+    except Exception as error:
+        logger.error(f"Kafka producer shutdown error: {error}")
+
+    logger.info("Pokemon API shutdown complete")
