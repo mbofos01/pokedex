@@ -21,9 +21,11 @@ Point your phone camera at any Pokémon → instantly get identification with st
 
 ## 🔢 Dashboards
 
-![Database Stats](docs/screenshots/db-data.png)
-![Live Analytics](docs/screenshots/live-analytics.png)
-![Container Info](docs/screenshots/container-analytics.png)
+| Dashboard | Screenshot |
+|-----------|-----------|
+| Database Stats | <img src="docs/screenshots/db-data.png" width="400" alt="Database Stats"> |
+| Live Analytics | <img src="docs/screenshots/live-analytics.png" width="400" alt="Live Analytics"> |
+| Container Info | <img src="docs/screenshots/container-analytics.png" width="400" alt="Container Info"> |
 
 
 ## 🏗️ Architecture
@@ -63,12 +65,12 @@ A microservices-based system designed for scalability and maintainability.
 - 🎨 Official artwork display  
 - ⚡ Real-time processing with Kafka  
 - 🔒 50% confidence threshold  
-- 🔐 Encrypted data at rest (Redis)
 - 🌐 Public API access via ngrok tunnel
 - 🧭 Classic Pokédex-style UI  
 - 📊 Real-time analytics dashboards (Grafana)
 - 🖥️ Container management UI (Portainer)
 - 📈 System metrics monitoring (Prometheus + Node Exporter)
+- 🔄 Real-time WebSocket results streaming
 
 
 ## 🚀 Quick Start
@@ -167,9 +169,25 @@ Backend built with FastAPI, accessible via ngrok tunnel.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST   | /classify-pokemon/ | Upload image for classification |
-| GET    | /result/{request_id} | Retrieve classification result |
+| POST   | /classify-pokemon/ | Upload image for classification (returns request_id) |
+| WebSocket | /ws/{request_id} | Real-time result streaming |
 | GET    | /health | Health check |
+
+### Real-Time Result Streaming
+
+Classification results flow through a Kafka pipeline in real-time:
+
+1. **POST /classify-pokemon/** - Upload image → receive `request_id`
+2. **WebSocket /ws/{request_id}** - Connect to receive live updates:
+   - Image validation
+   - ML classification result
+   - Pokémon enhancement (stats, abilities, artwork)
+   - Complete enriched result
+
+The pipeline processes through Kafka topics:
+- `pokemon-image` → `pkmn-classifier` → `pokemon-result`
+- `pokemon-result` → `pkmn-enhancement` → `pokemon-enriched`
+- Results pushed to WebSocket client and logged to analytics database
 
 **Documentation:**
 - ReDoc: `https://your-ngrok-url/pkmn-api/docs`
@@ -190,11 +208,11 @@ Backend built with FastAPI, accessible via ngrok tunnel.
 
 ## 🔐 Security Features
 
-- **Encrypted Redis Cache** - All classification results encrypted at rest using Fernet (AES-128)
 - **Rate-Limited PokeAPI Access** - 0.5s delay between requests
 - **Restart Limits** - Services limited to 3 restart attempts
 - **Compressed Images** - Auto-compressed to 800x800 max
 - **Health Checks** - All services monitored
+- **PostgreSQL-based Results** - Classification results stored in PostgreSQL with analytics tracking
 
 ## 🧠 Machine Learning Classifier
 
@@ -228,14 +246,12 @@ PostgreSQL, with tables for:
 - **ngrok** - Secure tunnel to localhost (v3)
 - **Nginx** - Reverse proxy
 - **Kafka** - Message broker for async processing
-- **Redis** - Encrypted result caching
 - **uv** - Fast Python package installer (10-100x faster than pip)
 - **Kafka UI** - Message monitoring at `http://localhost:8080`
 
 ## 🐛 Common Issues
 
 - **Mobile won't connect** → Verify ngrok URL in `App.tsx` matches `docker logs ngrok`
-- **No encryption key** → Run `python pkmn-api/src/generate_key.py`
 - **Model slow first time** → Downloads ~400 MB model cache from HuggingFace
 - **Expo errors** → Use Node 24+, run `npm install --legacy-peer-deps`
 - **Image too large** → Auto-compressed to 800×800 max
